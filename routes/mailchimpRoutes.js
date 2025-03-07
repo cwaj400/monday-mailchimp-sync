@@ -71,7 +71,6 @@ router.get('/list', async (req, res) => {
     const response = await mailchimp.lists.getList(audienceId);
     
     res.json({
-      id: response.id,
       name: response.name,
       memberCount: response.stats.member_count,
       unsubscribeCount: response.stats.unsubscribe_count,

@@ -5,11 +5,6 @@ const { validateMondayWebhook } = require('../controllers/mondayController');
 const router = express.Router();
 const { executeQuery } = require('../utils/mondayClient');
 
-router.get('/getLeads', getMondayLeads);
-router.post('/updateTouchpoints', updateTouchpoints);
-
-router.post('/webhook', validateMondayWebhook, handleMondayWebhook);
-
 // Check Monday.com connection status
 router.get('/', async (req, res) => {
   try {

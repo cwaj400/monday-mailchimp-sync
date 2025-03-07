@@ -33,7 +33,7 @@ exports.syncToMailchimp = async (req, res) => {
 
         res.json({ message: "Sync completed" });
     } catch (error) {
-        console.error("Sync error:", error);
+        console.error("Sync error:", error.message);
         res.status(500).json({ error: "Sync failed" });
     }
 };

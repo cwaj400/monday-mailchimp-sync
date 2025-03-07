@@ -38,7 +38,7 @@ exports.getMondayLeads = async (req, res) => {
 
         res.json(leads);
     } catch (error) {
-        console.error('Error fetching leads:', error);
+        console.error('Error fetching leads:', error.message);
         res.status(500).json({ error: 'Failed to fetch leads' });
     }
 };
@@ -69,7 +69,7 @@ exports.updateTouchpoints = async (req, res) => {
 
         res.json({ message: "Touchpoints updated successfully" });
     } catch (error) {
-        console.error("Error updating touchpoints:", error);
+        console.error("Error updating touchpoints:", error.message);
         res.status(500).json({ error: "Failed to update touchpoints" });
     }
 };
