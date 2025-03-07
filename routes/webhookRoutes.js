@@ -11,12 +11,12 @@ const {
   MONDAY_BOARD_ID,
   TOUCHPOINTS_COLUMN_ID 
 } = require('../utils/mondayService');
-const { handleSubscriberEvent } = require('./webhookHandlers.js/handleSubscriberEvent');
-const { handleCampaignEvent } = require('./webhookHandlers.js/handleCampaignEvent');
-const { handleEmailSend } = require('./webhookHandlers.js/handleEmailSend');
-const { handleEmailOpen } = require('./webhookHandlers.js/handleEmailOpen');
-const { handleEmailClick } = require('./webhookHandlers.js/handleEmailClick');
-const { handleWebhookError } = require('./webhookHandlers.js/handleWebhookError');
+const { handleSubscriberEvent } = require('./webhookHandlers/handleSubscriberEvent.js');
+const { handleCampaignEvent } = require('./webhookHandlers/handleCampaignEvent.js');
+const { handleEmailSend } = require('./webhookHandlers/handleEmailSend.js');
+const { handleEmailOpen } = require('./webhookHandlers/handleEmailOpen.js');
+const { handleEmailClick } = require('./webhookHandlers/handleEmailClick.js');
+const { handleWebhookError } = require('./webhookHandlers/handleWebhookError.js');
 
 const dotenv = require('dotenv');
 dotenv.config();
