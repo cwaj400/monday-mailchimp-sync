@@ -1,0 +1,394 @@
+{
+  "board": {
+    "id": "8628615937",
+    "name": "LEAD TEST - WILL",
+    "description": null,
+    "state": "active",
+    "board_kind": "public",
+    "columns": [
+      {
+        "id": "name",
+        "title": "Name",
+        "type": "name",
+        "settings_str": "{}"
+      },
+      {
+        "id": "multiple_person_mknr3xnr",
+        "title": "Owner",
+        "type": "people",
+        "settings_str": "{}"
+      },
+      {
+        "id": "text_mknryxb5",
+        "title": "First Name",
+        "type": "text",
+        "settings_str": "{}"
+      },
+      {
+        "id": "text_mknrw0nx",
+        "title": "Last Name",
+        "type": "text",
+        "settings_str": "{}"
+      },
+      {
+        "id": "status",
+        "title": "Status",
+        "type": "status",
+        "settings_str": "{\"done_colors\":[1],\"labels\":{\"0\":\"Working on it\",\"1\":\"Done\",\"2\":\"Stuck\"},\"labels_positions_v2\":{\"0\":0,\"1\":2,\"2\":1,\"5\":3},\"labels_colors\":{\"0\":{\"color\":\"#fdab3d\",\"border\":\"#e99729\",\"var_name\":\"orange\"},\"1\":{\"color\":\"#00c875\",\"border\":\"#00b461\",\"var_name\":\"green-shadow\"},\"2\":{\"color\":\"#df2f4a\",\"border\":\"#ce3048\",\"var_name\":\"red-shadow\"}}}"
+      },
+      {
+        "id": "subtasks_mknrgrg",
+        "title": "Subitems",
+        "type": "subtasks",
+        "settings_str": "{\"displayType\":\"BOARD_INLINE\",\"itemTypeName\":\"column.subtasks.title\",\"allowMultipleItems\":true,\"boardIds\":[8628627679]}"
+      },
+      {
+        "id": "date_mknrqypm",
+        "title": "Tentative Event Date",
+        "type": "date",
+        "settings_str": "{\"hide_footer\":false}"
+      },
+      {
+        "id": "email_mknrc1cr",
+        "title": "Email",
+        "type": "email",
+        "settings_str": "{}"
+      },
+      {
+        "id": "date4",
+        "title": "Date",
+        "type": "date",
+        "settings_str": "{}"
+      },
+      {
+        "id": "date_mknrnf3a",
+        "title": "Berwick Contact Date",
+        "type": "date",
+        "settings_str": "{\"hide_footer\":false,\"date_format\":\"WITH_YEAR\"}"
+      },
+      {
+        "id": "dropdown_mknr962p",
+        "title": "Lead Source",
+        "type": "dropdown",
+        "settings_str": "{\"limit_select\":false,\"hide_footer\":false,\"labels\":[{\"id\":16,\"name\":\"Guest of Host\"},{\"id\":1,\"name\":\"Berwick Website\"},{\"id\":2,\"name\":\"Email/Phone Enquiry\"},{\"id\":3,\"name\":\"Hitched\"},{\"id\":4,\"name\":\"Instagram\"},{\"id\":5,\"name\":\"JJMedia\"},{\"id\":6,\"name\":\"Landed Houses\"},{\"id\":7,\"name\":\"Other\"},{\"id\":8,\"name\":\"Personal Connection\"},{\"id\":9,\"name\":\"AirBnb\"},{\"id\":10,\"name\":\"Word of Mouth\"},{\"id\":12,\"name\":\"UKBride\"},{\"id\":14,\"name\":\"Coco Weddings\"},{\"id\":15,\"name\":\"ExCel 2024\"}],\"deactivated_labels\":[]}"
+      },
+      {
+        "id": "dropdown_mknr6qht",
+        "title": "Event Type",
+        "type": "dropdown",
+        "settings_str": "{\"limit_select\":true,\"hide_footer\":false,\"labels\":[{\"id\":1,\"name\":\"Wedding\"},{\"id\":2,\"name\":\"Corporate Event\"},{\"id\":3,\"name\":\"Celebration of Life\"},{\"id\":4,\"name\":\"Party\"},{\"id\":5,\"name\":\"Accommodation\"},{\"id\":6,\"name\":\"Film/Photo Shoot\"},{\"id\":7,\"name\":\"Party Event\"},{\"id\":8,\"name\":\"Other\"},{\"id\":9,\"name\":\"Partnership\"},{\"id\":10,\"name\":\"Charity\"},{\"id\":11,\"name\":\"Newsletter\"},{\"id\":12,\"name\":\"Gala\"},{\"id\":13,\"name\":\"Reception\"},{\"id\":14,\"name\":\"Corporate\"},{\"id\":15,\"name\":\"Filming\"}],\"label_limit_count\":1,\"deactivated_labels\":[4]}"
+      },
+      {
+        "id": "dropdown_mknrgvr4",
+        "title": "Pricing Shared",
+        "type": "dropdown",
+        "settings_str": "{\"limit_select\":true,\"hide_footer\":false,\"labels\":[{\"id\":1,\"name\":\"2023 pre-works\"},{\"id\":2,\"name\":\"2023-2024\"},{\"id\":3,\"name\":\"2025\"},{\"id\":4,\"name\":\"2026\"},{\"id\":5,\"name\":\"Non-standard\"},{\"id\":6,\"name\":\"2024 March Update\"},{\"id\":7,\"name\":\"2025 March Update\"},{\"id\":8,\"name\":\"2026 March Update\"},{\"id\":9,\"name\":\"N/A\"},{\"id\":10,\"name\":\"2025 May Update\"},{\"id\":11,\"name\":\"2024 May Update\"},{\"id\":12,\"name\":\"2026 May Update\"},{\"id\":13,\"name\":\"2025-2027 New Pricing\"}],\"label_limit_count\":1,\"deactivated_labels\":[]}"
+      },
+      {
+        "id": "phone_mknrws1e",
+        "title": "Phone",
+        "type": "phone",
+        "settings_str": "{\"show_flag\":false}"
+      },
+      {
+        "id": "numeric_mknr1kvd",
+        "title": "Touchpoints",
+        "type": "numbers",
+        "settings_str": "{}"
+      },
+      {
+        "id": "text_mknr7n1x",
+        "title": "Text",
+        "type": "text",
+        "settings_str": "{}"
+      },
+      {
+        "id": "text_mknryy2m",
+        "title": "Partner First",
+        "type": "text",
+        "settings_str": "{}"
+      },
+      {
+        "id": "text_mknrwkvx",
+        "title": "Partner Last",
+        "type": "text",
+        "settings_str": "{}"
+      },
+      {
+        "id": "date_mknrp4rg",
+        "title": "Contacted On",
+        "type": "date",
+        "settings_str": "{\"hide_footer\":false}"
+      },
+      {
+        "id": "color_mkns5rra",
+        "title": "Enrolled",
+        "type": "status",
+        "settings_str": "{\"done_colors\":[1],\"labels\":{\"0\":\"Unsubscribed\",\"1\":\"Yes\",\"2\":\"No\"},\"labels_positions_v2\":{\"0\":2,\"1\":0,\"2\":1,\"5\":3},\"labels_colors\":{\"0\":{\"color\":\"#fdab3d\",\"border\":\"#e99729\",\"var_name\":\"orange\"},\"1\":{\"color\":\"#00c875\",\"border\":\"#00b461\",\"var_name\":\"green-shadow\"},\"2\":{\"color\":\"#df2f4a\",\"border\":\"#ce3048\",\"var_name\":\"red-shadow\"}}}"
+      }
+    ],
+    "groups": [
+      {
+        "id": "topics",
+        "title": "All Leads",
+        "color": "#579bfc",
+        "position": "65536"
+      }
+    ],
+    "items_count": 2
+  },
+  "sampleItems": [
+    {
+      "id": "8628657282",
+      "name": "Will Angell-James",
+      "column_values": [
+        {
+          "id": "multiple_person_mknr3xnr",
+          "text": "Will Angell-James, Tim Franklin",
+          "value": "{\"personsAndTeams\":[{\"id\":58932741,\"kind\":\"person\"},{\"id\":60037763,\"kind\":\"person\"}]}",
+          "type": "people"
+        },
+        {
+          "id": "text_mknryxb5",
+          "text": "Emily",
+          "value": "\"Emily\"",
+          "type": "text"
+        },
+        {
+          "id": "text_mknrw0nx",
+          "text": "Branston",
+          "value": "\"Branston\"",
+          "type": "text"
+        },
+        {
+          "id": "status",
+          "text": null,
+          "value": "{\"index\":5,\"post_id\":null,\"changed_at\":\"2025-02-26T21:04:37.231Z\"}",
+          "type": "status"
+        },
+        {
+          "id": "subtasks_mknrgrg",
+          "text": null,
+          "value": "{}",
+          "type": "subtasks"
+        },
+        {
+          "id": "date_mknrqypm",
+          "text": "",
+          "value": null,
+          "type": "date"
+        },
+        {
+          "id": "email_mknrc1cr",
+          "text": "angelljamesw@gmail.com",
+          "value": "{\"text\":\"angelljamesw@gmail.com\",\"email\":\"angelljamesw@gmail.com\",\"changed_at\":\"2025-03-06T02:08:09.134Z\"}",
+          "type": "email"
+        },
+        {
+          "id": "date4",
+          "text": "",
+          "value": null,
+          "type": "date"
+        },
+        {
+          "id": "date_mknrnf3a",
+          "text": "2025-02-03",
+          "value": "{\"date\":\"2025-02-03\",\"changed_at\":\"2025-02-03T18:23:22.777Z\"}",
+          "type": "date"
+        },
+        {
+          "id": "dropdown_mknr962p",
+          "text": "Landed Houses",
+          "value": "{\"ids\":[6],\"changed_at\":\"2025-02-03T18:23:22.779Z\"}",
+          "type": "dropdown"
+        },
+        {
+          "id": "dropdown_mknr6qht",
+          "text": "Corporate",
+          "value": "{\"ids\":[14],\"changed_at\":null}",
+          "type": "dropdown"
+        },
+        {
+          "id": "dropdown_mknrgvr4",
+          "text": null,
+          "value": null,
+          "type": "dropdown"
+        },
+        {
+          "id": "phone_mknrws1e",
+          "text": "",
+          "value": null,
+          "type": "phone"
+        },
+        {
+          "id": "numeric_mknr1kvd",
+          "text": "3",
+          "value": "\"3\"",
+          "type": "numbers"
+        },
+        {
+          "id": "text_mknr7n1x",
+          "text": "",
+          "value": null,
+          "type": "text"
+        },
+        {
+          "id": "text_mknryy2m",
+          "text": "",
+          "value": null,
+          "type": "text"
+        },
+        {
+          "id": "text_mknrwkvx",
+          "text": "",
+          "value": null,
+          "type": "text"
+        },
+        {
+          "id": "date_mknrp4rg",
+          "text": "",
+          "value": null,
+          "type": "date"
+        },
+        {
+          "id": "color_mkns5rra",
+          "text": "Yes",
+          "value": "{\"index\":1,\"post_id\":null,\"changed_at\":\"2025-03-06T02:03:35.963Z\"}",
+          "type": "status"
+        }
+      ],
+      "group": {
+        "id": "topics",
+        "title": "All Leads"
+      },
+      "created_at": "2025-03-05T17:55:49Z",
+      "updated_at": "2025-03-06T02:25:35Z"
+    },
+    {
+      "id": "8628657341",
+      "name": "Sharni Tapako-Brown and Conna (copy)",
+      "column_values": [
+        {
+          "id": "multiple_person_mknr3xnr",
+          "text": "Will Angell-James",
+          "value": "{\"personsAndTeams\":[{\"id\":58932741,\"kind\":\"person\"}]}",
+          "type": "people"
+        },
+        {
+          "id": "text_mknryxb5",
+          "text": "Sharni",
+          "value": "\"Sharni\"",
+          "type": "text"
+        },
+        {
+          "id": "text_mknrw0nx",
+          "text": "Tapako-Brown",
+          "value": "\"Tapako-Brown\"",
+          "type": "text"
+        },
+        {
+          "id": "status",
+          "text": null,
+          "value": "{\"index\":5,\"post_id\":null,\"changed_at\":\"2025-02-16T16:43:04.462Z\"}",
+          "type": "status"
+        },
+        {
+          "id": "subtasks_mknrgrg",
+          "text": null,
+          "value": "{}",
+          "type": "subtasks"
+        },
+        {
+          "id": "date_mknrqypm",
+          "text": "2026-10-02",
+          "value": "{\"date\":\"2026-10-02\"}",
+          "type": "date"
+        },
+        {
+          "id": "email_mknrc1cr",
+          "text": "will@berwick-house.com",
+          "value": "{\"text\":\"will@berwick-house.com\",\"email\":\"will@berwick-house.com\",\"changed_at\":\"2025-03-06T02:08:13.674Z\"}",
+          "type": "email"
+        },
+        {
+          "id": "date4",
+          "text": "",
+          "value": null,
+          "type": "date"
+        },
+        {
+          "id": "date_mknrnf3a",
+          "text": "2025-01-29",
+          "value": "{\"date\":\"2025-01-29\",\"changed_at\":\"2025-01-30T11:17:13.432Z\"}",
+          "type": "date"
+        },
+        {
+          "id": "dropdown_mknr962p",
+          "text": "Berwick Website",
+          "value": "{\"ids\":[1],\"changed_at\":null}",
+          "type": "dropdown"
+        },
+        {
+          "id": "dropdown_mknr6qht",
+          "text": "Wedding",
+          "value": "{\"ids\":[1],\"changed_at\":null}",
+          "type": "dropdown"
+        },
+        {
+          "id": "dropdown_mknrgvr4",
+          "text": "2025-2027 New Pricing",
+          "value": "{\"ids\":[13],\"changed_at\":null}",
+          "type": "dropdown"
+        },
+        {
+          "id": "phone_mknrws1e",
+          "text": "",
+          "value": null,
+          "type": "phone"
+        },
+        {
+          "id": "numeric_mknr1kvd",
+          "text": "2",
+          "value": "\"2\"",
+          "type": "numbers"
+        },
+        {
+          "id": "text_mknr7n1x",
+          "text": "",
+          "value": null,
+          "type": "text"
+        },
+        {
+          "id": "text_mknryy2m",
+          "text": "",
+          "value": null,
+          "type": "text"
+        },
+        {
+          "id": "text_mknrwkvx",
+          "text": "",
+          "value": null,
+          "type": "text"
+        },
+        {
+          "id": "date_mknrp4rg",
+          "text": "",
+          "value": null,
+          "type": "date"
+        },
+        {
+          "id": "color_mkns5rra",
+          "text": "No",
+          "value": "{\"index\":2,\"post_id\":null,\"changed_at\":\"2025-03-06T02:03:31.042Z\"}",
+          "type": "status"
+        }
+      ],
+      "group": {
+        "id": "topics",
+        "title": "All Leads"
+      },
+      "created_at": "2025-03-05T17:55:49Z",
+      "updated_at": "2025-03-06T02:08:19Z"
+    }
+  ]
+}

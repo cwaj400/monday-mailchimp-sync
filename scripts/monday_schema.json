@@ -1,0 +1,633 @@
+{
+  "__type": {
+    "name": "Board",
+    "kind": "OBJECT",
+    "fields": [
+      {
+        "name": "id",
+        "description": "The unique identifier of the board.",
+        "type": {
+          "name": null,
+          "kind": "NON_NULL",
+          "ofType": {
+            "name": "ID",
+            "kind": "SCALAR"
+          }
+        },
+        "args": []
+      },
+      {
+        "name": "updates",
+        "description": "The board's updates.",
+        "type": {
+          "name": null,
+          "kind": "LIST",
+          "ofType": {
+            "name": "Update",
+            "kind": "OBJECT"
+          }
+        },
+        "args": [
+          {
+            "name": "limit",
+            "description": "Number of items to get, the default is 25.",
+            "type": {
+              "name": "Int",
+              "kind": "SCALAR",
+              "ofType": null
+            }
+          },
+          {
+            "name": "page",
+            "description": "Page number to get, starting at 1.",
+            "type": {
+              "name": "Int",
+              "kind": "SCALAR",
+              "ofType": null
+            }
+          },
+          {
+            "name": "ids",
+            "description": "A list of items unique identifiers.",
+            "type": {
+              "name": null,
+              "kind": "LIST",
+              "ofType": {
+                "name": null,
+                "kind": "NON_NULL"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "name": "activity_logs",
+        "description": "The board log events.",
+        "type": {
+          "name": null,
+          "kind": "LIST",
+          "ofType": {
+            "name": "ActivityLogType",
+            "kind": "OBJECT"
+          }
+        },
+        "args": [
+          {
+            "name": "column_ids",
+            "description": "Column ids to filter",
+            "type": {
+              "name": null,
+              "kind": "LIST",
+              "ofType": {
+                "name": "String",
+                "kind": "SCALAR"
+              }
+            }
+          },
+          {
+            "name": "from",
+            "description": "From timestamp (ISO8601)",
+            "type": {
+              "name": "ISO8601DateTime",
+              "kind": "SCALAR",
+              "ofType": null
+            }
+          },
+          {
+            "name": "group_ids",
+            "description": "Group ids to filter",
+            "type": {
+              "name": null,
+              "kind": "LIST",
+              "ofType": {
+                "name": "String",
+                "kind": "SCALAR"
+              }
+            }
+          },
+          {
+            "name": "item_ids",
+            "description": "Item id to filter",
+            "type": {
+              "name": null,
+              "kind": "LIST",
+              "ofType": {
+                "name": null,
+                "kind": "NON_NULL"
+              }
+            }
+          },
+          {
+            "name": "limit",
+            "description": "Number of items to get, the default is 25.",
+            "type": {
+              "name": "Int",
+              "kind": "SCALAR",
+              "ofType": null
+            }
+          },
+          {
+            "name": "page",
+            "description": "Page number to get, starting at 1.",
+            "type": {
+              "name": "Int",
+              "kind": "SCALAR",
+              "ofType": null
+            }
+          },
+          {
+            "name": "to",
+            "description": "To timestamp (ISO8601)",
+            "type": {
+              "name": "ISO8601DateTime",
+              "kind": "SCALAR",
+              "ofType": null
+            }
+          },
+          {
+            "name": "user_ids",
+            "description": "User ids to filter.",
+            "type": {
+              "name": null,
+              "kind": "LIST",
+              "ofType": {
+                "name": null,
+                "kind": "NON_NULL"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "name": "board_folder_id",
+        "description": "The board's folder unique identifier.",
+        "type": {
+          "name": "ID",
+          "kind": "SCALAR",
+          "ofType": null
+        },
+        "args": []
+      },
+      {
+        "name": "board_kind",
+        "description": "The board's kind (public / private / share).",
+        "type": {
+          "name": null,
+          "kind": "NON_NULL",
+          "ofType": {
+            "name": "BoardKind",
+            "kind": "ENUM"
+          }
+        },
+        "args": []
+      },
+      {
+        "name": "collaborators",
+        "description": "The board's collaborators",
+        "type": {
+          "name": null,
+          "kind": "NON_NULL",
+          "ofType": {
+            "name": null,
+            "kind": "LIST"
+          }
+        },
+        "args": []
+      },
+      {
+        "name": "columns",
+        "description": "The board's visible columns.",
+        "type": {
+          "name": null,
+          "kind": "LIST",
+          "ofType": {
+            "name": "Column",
+            "kind": "OBJECT"
+          }
+        },
+        "args": [
+          {
+            "name": "ids",
+            "description": "A list of column unique identifiers.",
+            "type": {
+              "name": null,
+              "kind": "LIST",
+              "ofType": {
+                "name": "String",
+                "kind": "SCALAR"
+              }
+            }
+          },
+          {
+            "name": "types",
+            "description": "A list of column types.",
+            "type": {
+              "name": null,
+              "kind": "LIST",
+              "ofType": {
+                "name": null,
+                "kind": "NON_NULL"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "name": "columns_namespace",
+        "description": "The board's columns namespace.",
+        "type": {
+          "name": "String",
+          "kind": "SCALAR",
+          "ofType": null
+        },
+        "args": []
+      },
+      {
+        "name": "communication",
+        "description": "Get the board communication value - typically meeting ID",
+        "type": {
+          "name": "JSON",
+          "kind": "SCALAR",
+          "ofType": null
+        },
+        "args": []
+      },
+      {
+        "name": "creator",
+        "description": "The creator of the board.",
+        "type": {
+          "name": null,
+          "kind": "NON_NULL",
+          "ofType": {
+            "name": "User",
+            "kind": "OBJECT"
+          }
+        },
+        "args": []
+      },
+      {
+        "name": "description",
+        "description": "The board's description.",
+        "type": {
+          "name": "String",
+          "kind": "SCALAR",
+          "ofType": null
+        },
+        "args": []
+      },
+      {
+        "name": "groups",
+        "description": "The board's visible groups.",
+        "type": {
+          "name": null,
+          "kind": "LIST",
+          "ofType": {
+            "name": "Group",
+            "kind": "OBJECT"
+          }
+        },
+        "args": [
+          {
+            "name": "ids",
+            "description": "A list of group unique identifiers.",
+            "type": {
+              "name": null,
+              "kind": "LIST",
+              "ofType": {
+                "name": "String",
+                "kind": "SCALAR"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "name": "item_terminology",
+        "description": "The Board's item nickname, one of a predefined set of values, or a custom user value",
+        "type": {
+          "name": "String",
+          "kind": "SCALAR",
+          "ofType": null
+        },
+        "args": []
+      },
+      {
+        "name": "items_count",
+        "description": "The number of items on the board",
+        "type": {
+          "name": "Int",
+          "kind": "SCALAR",
+          "ofType": null
+        },
+        "args": []
+      },
+      {
+        "name": "items_limit",
+        "description": "The maximum number of items this board can have",
+        "type": {
+          "name": "Int",
+          "kind": "SCALAR",
+          "ofType": null
+        },
+        "args": []
+      },
+      {
+        "name": "items_page",
+        "description": "The board's items (rows).",
+        "type": {
+          "name": null,
+          "kind": "NON_NULL",
+          "ofType": {
+            "name": "ItemsResponse",
+            "kind": "OBJECT"
+          }
+        },
+        "args": [
+          {
+            "name": "cursor",
+            "description": "An opaque token representing the position in the result set from which to\nresume fetching items. Use this to paginate through large result sets.",
+            "type": {
+              "name": "String",
+              "kind": "SCALAR",
+              "ofType": null
+            }
+          },
+          {
+            "name": "limit",
+            "description": "The maximum number of items to fetch in a single request. Use this to\ncontrol the size of the result set and manage pagination. Maximum: 500.",
+            "type": {
+              "name": null,
+              "kind": "NON_NULL",
+              "ofType": {
+                "name": "Int",
+                "kind": "SCALAR"
+              }
+            }
+          },
+          {
+            "name": "query_params",
+            "description": "A set of parameters to filter, sort, and control the scope of the items\nquery. Use this to customize the results based on specific criteria.",
+            "type": {
+              "name": "ItemsQuery",
+              "kind": "INPUT_OBJECT",
+              "ofType": null
+            }
+          }
+        ]
+      },
+      {
+        "name": "name",
+        "description": "The board's name.",
+        "type": {
+          "name": null,
+          "kind": "NON_NULL",
+          "ofType": {
+            "name": "String",
+            "kind": "SCALAR"
+          }
+        },
+        "args": []
+      },
+      {
+        "name": "owners",
+        "description": "List of user board owners",
+        "type": {
+          "name": null,
+          "kind": "NON_NULL",
+          "ofType": {
+            "name": null,
+            "kind": "LIST"
+          }
+        },
+        "args": []
+      },
+      {
+        "name": "permissions",
+        "description": "The board's permissions.",
+        "type": {
+          "name": null,
+          "kind": "NON_NULL",
+          "ofType": {
+            "name": "String",
+            "kind": "SCALAR"
+          }
+        },
+        "args": []
+      },
+      {
+        "name": "source_solution_item_mapping",
+        "description": "The Board's source solution item mapping",
+        "type": {
+          "name": "String",
+          "kind": "SCALAR",
+          "ofType": null
+        },
+        "args": []
+      },
+      {
+        "name": "state",
+        "description": "The board's state (all / active / archived / deleted).",
+        "type": {
+          "name": null,
+          "kind": "NON_NULL",
+          "ofType": {
+            "name": "State",
+            "kind": "ENUM"
+          }
+        },
+        "args": []
+      },
+      {
+        "name": "subscribers",
+        "description": "The board's subscribers.",
+        "type": {
+          "name": null,
+          "kind": "NON_NULL",
+          "ofType": {
+            "name": null,
+            "kind": "LIST"
+          }
+        },
+        "args": []
+      },
+      {
+        "name": "tags",
+        "description": "The board's specific tags.",
+        "type": {
+          "name": null,
+          "kind": "LIST",
+          "ofType": {
+            "name": "Tag",
+            "kind": "OBJECT"
+          }
+        },
+        "args": []
+      },
+      {
+        "name": "team_owners",
+        "description": "List of team board owners",
+        "type": {
+          "name": null,
+          "kind": "LIST",
+          "ofType": {
+            "name": null,
+            "kind": "NON_NULL"
+          }
+        },
+        "args": [
+          {
+            "name": "limit",
+            "description": "Number of items to get, the default is 25.",
+            "type": {
+              "name": "Int",
+              "kind": "SCALAR",
+              "ofType": null
+            }
+          },
+          {
+            "name": "page",
+            "description": "Page number to get, starting at 1.",
+            "type": {
+              "name": "Int",
+              "kind": "SCALAR",
+              "ofType": null
+            }
+          }
+        ]
+      },
+      {
+        "name": "team_subscribers",
+        "description": "The board's team subscribers.",
+        "type": {
+          "name": null,
+          "kind": "LIST",
+          "ofType": {
+            "name": null,
+            "kind": "NON_NULL"
+          }
+        },
+        "args": [
+          {
+            "name": "limit",
+            "description": "Number of items to get, the default is 25.",
+            "type": {
+              "name": "Int",
+              "kind": "SCALAR",
+              "ofType": null
+            }
+          },
+          {
+            "name": "page",
+            "description": "Page number to get, starting at 1.",
+            "type": {
+              "name": "Int",
+              "kind": "SCALAR",
+              "ofType": null
+            }
+          }
+        ]
+      },
+      {
+        "name": "top_group",
+        "description": "The top group at this board.",
+        "type": {
+          "name": null,
+          "kind": "NON_NULL",
+          "ofType": {
+            "name": "Group",
+            "kind": "OBJECT"
+          }
+        },
+        "args": []
+      },
+      {
+        "name": "type",
+        "description": "The board object type.",
+        "type": {
+          "name": "BoardObjectType",
+          "kind": "ENUM",
+          "ofType": null
+        },
+        "args": []
+      },
+      {
+        "name": "updated_at",
+        "description": "The last time the board was updated at.",
+        "type": {
+          "name": "ISO8601DateTime",
+          "kind": "SCALAR",
+          "ofType": null
+        },
+        "args": []
+      },
+      {
+        "name": "url",
+        "description": "The Board's url",
+        "type": {
+          "name": null,
+          "kind": "NON_NULL",
+          "ofType": {
+            "name": "String",
+            "kind": "SCALAR"
+          }
+        },
+        "args": []
+      },
+      {
+        "name": "views",
+        "description": "The board's views.",
+        "type": {
+          "name": null,
+          "kind": "LIST",
+          "ofType": {
+            "name": "BoardView",
+            "kind": "OBJECT"
+          }
+        },
+        "args": [
+          {
+            "name": "ids",
+            "description": "A list of view unique identifiers.",
+            "type": {
+              "name": null,
+              "kind": "LIST",
+              "ofType": {
+                "name": null,
+                "kind": "NON_NULL"
+              }
+            }
+          },
+          {
+            "name": "type",
+            "description": "The view's type",
+            "type": {
+              "name": "String",
+              "kind": "SCALAR",
+              "ofType": null
+            }
+          }
+        ]
+      },
+      {
+        "name": "workspace",
+        "description": "The workspace that contains this board (null for main workspace).",
+        "type": {
+          "name": "Workspace",
+          "kind": "OBJECT",
+          "ofType": null
+        },
+        "args": []
+      },
+      {
+        "name": "workspace_id",
+        "description": "The board's workspace unique identifier (null for main workspace).",
+        "type": {
+          "name": "ID",
+          "kind": "SCALAR",
+          "ofType": null
+        },
+        "args": []
+      }
+    ]
+  }
+}

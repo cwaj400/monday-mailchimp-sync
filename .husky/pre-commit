@@ -1,0 +1,38 @@
+#!/usr/bin/env sh
+. "$(dirname -- "$0")/_/husky.sh"
+
+# Colors for output
+GREEN='\033[0;32m'
+RED='\033[0;31m'
+YELLOW='\033[0;33m'
+NC='\033[0m' # No Color
+
+# Check if SKIP_SNYK environment variable is set
+if [ "$SKIP_SNYK" = "true" ]; then
+  echo "${YELLOW}Skipping Snyk security checks (SKIP_SNYK=true)${NC}"
+else
+  echo "${YELLOW}Running security checks before commit...${NC}"
+
+  # Run Snyk security test
+  echo "${YELLOW}Running Snyk security scan...${NC}"
+  npx snyk test
+
+  # Check if Snyk succeeded
+  if [ $? -ne 0 ]; then
+    echo "${RED}❌ Snyk found security vulnerabilities. Commit aborted.${NC}"
+    echo "${YELLOW}Run 'npx snyk test' for details or 'npx snyk wizard' to fix issues.${NC}"
+    echo "${YELLOW}To bypass this check, use: SKIP_SNYK=true git commit${NC}"
+    exit 1
+  fi
+
+  echo "${GREEN}✅ Security checks passed!${NC}"
+fi
+
+# You can add more checks here if needed
+# For example, linting:
+# echo "${YELLOW}Running ESLint...${NC}"
+# npx eslint .
+
+# Or running tests:
+# echo "${YELLOW}Running tests...${NC}"
+# npm test 
