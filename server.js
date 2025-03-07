@@ -9,6 +9,7 @@ const cors = require('cors');
 const fs = require('fs');
 const { startCronJobs } = require('./services/cronService');
 const { validateEnv } = require('./utils/validateEnvs');
+const { apiKeyAuth } = require('./utils/authMiddleware');
 // Routes
 const webhookRoutes = require('./routes/webhookRoutes');
 const mondayRoutes = require('./routes/mondayRoutes');
@@ -36,7 +37,7 @@ validateEnv();
 app.use('/api/webhooks', webhookRoutes);
 app.use('/api/monday', mondayRoutes);
 app.use('/api/mailchimp', mailchimpRoutes);
-app.use('/api/status', statusRoutes);
+app.use('/api/status', apiKeyAuth);
 app.use('/', homeRoute);
 app.use('/', healthRoute);
 

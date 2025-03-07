@@ -69,65 +69,7 @@ MAILCHIMP_API_KEY=your_mailchimp_api_key
 MAILCHIMP_SERVER_PREFIX=us1
 MAILCHIMP_AUDIENCE_ID=your_audience_id
 MAILCHIMP_WEBHOOK_SECRET=your_webhook_secret
-
-# Discord
-DISCORD_WEBHOOK_URL=your_discord_webhook_url
 ```
-
-Optional variables:
-```
-```
-
-## 📊 API Endpoints
-
-### Webhooks
-- `POST /api/webhooks/mailchimp` - Receive Mailchimp webhook events
-- `POST /api/webhooks/test` - Test endpoint for webhook functionality
-- `GET /api/webhooks/process-campaign/:campaignId` - Manually process a campaign
-
-### Monday.com
-- `GET /api/monday` - Check Monday.com connection status
-- `GET /api/monday/getLeads` - Get leads from Monday.com
-- `POST /api/monday/updateTouchpoints` - Update touchpoints for contacts
-- `POST /api/monday/webhook` - Handle Monday.com webhook events
-- `GET /api/monday/board/:boardId` - Get board information
-- `GET /api/monday/board/:boardId/items` - Get items from a board
-- `POST /api/monday/item/:itemId/increment-touchpoints` - Increment touchpoints for an item
-
-### Mailchimp
-- `GET /api/mailchimp` - Check Mailchimp connection status and account information
-- `GET /api/mailchimp/list` - Get Mailchimp audience information
-- `GET /api/mailchimp/list/members` - Get audience members (paginated)
-- `POST /api/mailchimp/list/members` - Add a single member to the audience
-- `GET /api/mailchimp/list/campaigns` - Get campaigns for the audience
-- `GET /api/mailchimp/list/growth-history` - Get audience growth history
-
-### System
-- `GET /api/status` - Check service status
-- `GET /health` - Simple health check
-
-### Settings
-- `GET /api/settings` - View application settings
-
-## 🧪 Testing
-
-Run all tests:
-```bash
-npm test
-```
-
-Run specific test suites:
-```bash
-npm run test:monday    # Monday.com tests
-npm run test:mailchimp # Mailchimp tests
-npm run test:discord   # Discord notification tests
-```
-
-Generate test coverage report:
-```bash
-npm run test:coverage
-```
-
 ## 🔒 Security
 
 This project uses Snyk for security scanning. Snyk runs automatically before each commit via Husky.
@@ -168,14 +110,6 @@ Make sure to set all environment variables in the Vercel dashboard.
 - `package.json` - Project dependencies and scripts
 - `server.js` - Main application entry point
 
-### Routes Directory (`/routes`)
-Contains all API route handlers organized by service:
-
-- `webhookRoutes.js` - Routes for handling incoming webhooks from Mailchimp
-- `mondayRoutes.js` - Routes for Monday.com API interactions
-- `mailchimpRoutes.js` - Routes for Mailchimp API interactions
-- `settingsRoutes.js` - Routes for application settings management
-
 #### Webhook Handlers (`/routes/webhookHandlers`)
 - `handleSubscriberEvent.js` - Processes Mailchimp subscriber events (subscribe, unsubscribe)
 - `handleCampaignEvent.js` - Processes Mailchimp campaign events (send, open, click)
@@ -197,23 +131,6 @@ Utility functions and service clients:
 Business logic and core functionality:
 
 - `cronService.js` - Scheduled tasks for periodic synchronization
-
-### Tests Directory (`/tests`)
-Test files organized by service:
-
-- `monday-*.test.js` - Tests for Monday.com functionality
-- `mailchimp-*.test.js` - Tests for Mailchimp functionality
-- `discord-*.test.js` - Tests for Discord notification functionality
-
-### Scripts Directory (`/scripts`)
-Utility scripts for development and testing:
-
-- `test-monday.js` - Script to test Monday.com API connection
-- `test-mailchimp.js` - Script to test Mailchimp API connection
-- `test-discord.js` - Script to test Discord webhook notifications
-- `test-webhook.js` - Script to simulate Mailchimp webhook events
-- `test-touchpoints.js` - Script to test touchpoint incrementation
-- `test-add-monday-note.js` - Script to test adding notes to Monday items
 
 ## 🤝 Contributing
 
