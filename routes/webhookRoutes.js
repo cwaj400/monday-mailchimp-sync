@@ -186,22 +186,4 @@ router.post('/test', (req, res) => {
   });
 });
 
-// Debug endpoint
-router.post('/debug', (req, res) => {
-  console.log('DEBUG REQUEST:');
-  console.log('Headers:', req.headers);
-  console.log('Body:', req.body);
-  console.log('Method:', req.method);
-  console.log('URL:', req.url);
-  
-  res.status(200).json({
-    success: true,
-    message: 'Debug information logged',
-    headers: req.headers,
-    body: req.body,
-    method: req.method,
-    url: req.url
-  });
-});
-
 module.exports = router; 

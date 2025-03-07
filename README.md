@@ -82,6 +82,8 @@ Optional variables:
 
 ### Webhooks
 - `POST /api/webhooks/mailchimp` - Receive Mailchimp webhook events
+- `POST /api/webhooks/test` - Test endpoint for webhook functionality
+- `GET /api/webhooks/process-campaign/:campaignId` - Manually process a campaign
 
 ### Monday.com
 - `GET /api/monday` - Check Monday.com connection status
@@ -101,12 +103,19 @@ Optional variables:
 - `GET /api/mailchimp/list/growth-history` - Get audience growth history
 
 ### Sync
-- `POST /api/sync/run` - Manually trigger synchronization
-- `GET /api/sync/status` - Check sync status
+- `POST /api/sync` - Manually trigger synchronization
+- `GET /api/sync` - Check sync status
+- `GET /api/sync/preview` - Preview what will be synced without actually syncing
+- `POST /api/sync/contact/:itemId` - Sync a single contact
+- `POST /api/sync/schedule` - Schedule a sync (placeholder)
+- `POST /api/sync/check-touchpoints` - Manually trigger touchpoint update check
 
 ### System
 - `GET /api/status` - Check service status
 - `GET /health` - Simple health check
+
+### Settings
+- `GET /api/settings` - View application settings
 
 ## 🧪 Testing
 

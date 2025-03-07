@@ -142,6 +142,8 @@ router.get('/', (req, res) => {
         <h3>Webhook Endpoints</h3>
         <ul>
           <li><code>/api/webhooks/mailchimp</code> - Receive Mailchimp webhook events</li>
+          <li><code>/api/webhooks/test</code> - Test endpoint for webhook functionality</li>
+          <li><code>/api/webhooks/process-campaign/:campaignId</code> - Manually process a campaign</li>
         </ul>
       </div>
       
@@ -173,8 +175,19 @@ router.get('/', (req, res) => {
       <div class="endpoint-group">
         <h3>Sync Endpoints</h3>
         <ul>
-          <li><code>/api/sync/run</code> - Manually trigger synchronization</li>
-          <li><code>/api/sync/status</code> - Check sync status</li>
+          <li><code>/api/sync</code> (POST) - Manually trigger synchronization</li>
+          <li><code>/api/sync</code> (GET) - Check sync status</li>
+          <li><code>/api/sync/preview</code> - Preview what will be synced without actually syncing</li>
+          <li><code>/api/sync/contact/:itemId</code> - Sync a single contact</li>
+          <li><code>/api/sync/schedule</code> - Schedule a sync (placeholder)</li>
+          <li><code>/api/sync/check-touchpoints</code> - Manually trigger touchpoint update check</li>
+        </ul>
+      </div>
+      
+      <div class="endpoint-group">
+        <h3>Settings Endpoints</h3>
+        <ul>
+          <li><code>/api/settings</code> - View application settings</li>
         </ul>
       </div>
       
