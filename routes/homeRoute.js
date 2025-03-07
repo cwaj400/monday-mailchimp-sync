@@ -173,18 +173,6 @@ router.get('/', (req, res) => {
       </div>
       
       <div class="endpoint-group">
-        <h3>Sync Endpoints</h3>
-        <ul>
-          <li><code>/api/sync</code> (POST) - Manually trigger synchronization</li>
-          <li><code>/api/sync</code> (GET) - Check sync status</li>
-          <li><code>/api/sync/preview</code> - Preview what will be synced without actually syncing</li>
-          <li><code>/api/sync/contact/:itemId</code> - Sync a single contact</li>
-          <li><code>/api/sync/schedule</code> - Schedule a sync (placeholder)</li>
-          <li><code>/api/sync/check-touchpoints</code> - Manually trigger touchpoint update check</li>
-        </ul>
-      </div>
-      
-      <div class="endpoint-group">
         <h3>Settings Endpoints</h3>
         <ul>
           <li><code>/api/settings</code> - View application settings</li>

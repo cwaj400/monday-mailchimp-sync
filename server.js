@@ -1,6 +1,7 @@
 const dotenv = require('dotenv');
 dotenv.config();
 
+
 const express = require('express');
 const path = require('path');
 const bodyParser = require('body-parser');
@@ -12,10 +13,10 @@ const { validateEnv } = require('./utils/validateEnvs');
 const webhookRoutes = require('./routes/webhookRoutes');
 const mondayRoutes = require('./routes/mondayRoutes');
 const mailchimpRoutes = require('./routes/mailchimpRoutes');
-const syncRoutes = require('./routes/syncRoutes');
 const settingsRoutes = require('./routes/settingsRoutes');
 const statusRoutes = require('./routes/statusRoutes');
 const homeRoute = require('./routes/homeRoute');
+const statusApiRoute = require('./routes/statusApiRoute');
 const healthRoute = require('./routes/healthRoute');
 
 
@@ -37,7 +38,6 @@ validateEnv();
 app.use('/api/webhooks', webhookRoutes);
 app.use('/api/monday', mondayRoutes);
 app.use('/api/mailchimp', mailchimpRoutes);
-app.use('/api/sync', syncRoutes);
 app.use('/settings', settingsRoutes);
 app.use('/api/status', statusRoutes);
 app.use('/', homeRoute);

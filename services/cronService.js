@@ -4,7 +4,7 @@ const { getMailchimpClient } = require('../utils/mailchimpClient');
 const { getMockMailchimpClient } = require('../utils/mockMailchimpClient');
 const { sendDiscordNotification } = require('../utils/discordNotifier');
 const { 
-  getMondayContacts, 
+  getAllMondayContacts, 
   incrementTouchpoints,
   TOUCHPOINTS_COLUMN_ID,
   EMAIL_COLUMN_ID

@@ -265,6 +265,7 @@ async function getAllMondayContacts() {
     `;
     
     const result = await executeQuery(query);
+
     
     if (!result.data || !result.data.boards || result.data.boards.length === 0) {
       return [];

@@ -102,14 +102,6 @@ Optional variables:
 - `GET /api/mailchimp/list/campaigns` - Get campaigns for the audience
 - `GET /api/mailchimp/list/growth-history` - Get audience growth history
 
-### Sync
-- `POST /api/sync` - Manually trigger synchronization
-- `GET /api/sync` - Check sync status
-- `GET /api/sync/preview` - Preview what will be synced without actually syncing
-- `POST /api/sync/contact/:itemId` - Sync a single contact
-- `POST /api/sync/schedule` - Schedule a sync (placeholder)
-- `POST /api/sync/check-touchpoints` - Manually trigger touchpoint update check
-
 ### System
 - `GET /api/status` - Check service status
 - `GET /health` - Simple health check
@@ -182,7 +174,6 @@ Contains all API route handlers organized by service:
 - `webhookRoutes.js` - Routes for handling incoming webhooks from Mailchimp
 - `mondayRoutes.js` - Routes for Monday.com API interactions
 - `mailchimpRoutes.js` - Routes for Mailchimp API interactions
-- `syncRoutes.js` - Routes for triggering and managing synchronization
 - `settingsRoutes.js` - Routes for application settings management
 
 #### Webhook Handlers (`/routes/webhookHandlers`)
@@ -201,7 +192,6 @@ Utility functions and service clients:
 - `mailchimpClient.js` - Client for Mailchimp API
 - `discordNotifier.js` - Functions for sending notifications to Discord
 - `validateEnvs.js` - Environment variable validation and loading
-- `syncService.js` - Core synchronization logic
 
 ### Services Directory (`/services`)
 Business logic and core functionality:
@@ -224,7 +214,6 @@ Utility scripts for development and testing:
 - `test-webhook.js` - Script to simulate Mailchimp webhook events
 - `test-touchpoints.js` - Script to test touchpoint incrementation
 - `test-add-monday-note.js` - Script to test adding notes to Monday items
-- `test-sync.js` - Script to test synchronization process
 
 ## 🤝 Contributing
 
