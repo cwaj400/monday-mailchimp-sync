@@ -113,72 +113,7 @@ router.get('/', (req, res) => {
           <span class="status-label">Mailchimp:</span>
           <span class="status-value">${process.env.MAILCHIMP_API_KEY ? '✅ Configured' : '❌ Not configured'}</span>
         </div>
-        <div class="status-item">
-          <span class="status-label">Discord:</span>
-          <span class="status-value">${process.env.DISCORD_WEBHOOK_URL ? '✅ Configured' : '❌ Not configured'}</span>
-        </div>
-        ${process.env.MAILCHIMP_AUDIENCE_NAME ? 
-          `<div class="status-item">
-            <span class="status-label">Mailchimp Audience:</span>
-            <span class="status-value">${process.env.MAILCHIMP_AUDIENCE_NAME}</span>
-          </div>` : ''}
-        <div class="status-item">
-          <span class="status-label">Mailchimp Audience ID:</span>
-          <span class="status-value">${process.env.MAILCHIMP_AUDIENCE_ID || 'Not configured'}</span>
-        </div>
       </div>
-      
-      <h2>API Endpoints</h2>
-      
-      <div class="endpoint-group">
-        <h3>System Endpoints</h3>
-        <ul>
-          <li><code>/api/status</code> - Check service status</li>
-          <li><code>/health</code> - Simple health check</li>
-        </ul>
-      </div>
-      
-      <div class="endpoint-group">
-        <h3>Webhook Endpoints</h3>
-        <ul>
-          <li><code>/api/webhooks/mailchimp</code> - Receive Mailchimp webhook events</li>
-          <li><code>/api/webhooks/test</code> - Test endpoint for webhook functionality</li>
-          <li><code>/api/webhooks/process-campaign/:campaignId</code> - Manually process a campaign</li>
-        </ul>
-      </div>
-      
-      <div class="endpoint-group">
-        <h3>Monday.com Endpoints</h3>
-        <ul>
-          <li><code>/api/monday</code> - Check Monday.com connection status</li>
-          <li><code>/api/monday/getLeads</code> - Get leads from Monday.com</li>
-          <li><code>/api/monday/updateTouchpoints</code> - Update touchpoints for contacts</li>
-          <li><code>/api/monday/webhook</code> - Handle Monday.com webhook events</li>
-          <li><code>/api/monday/board/:boardId</code> - Get board information</li>
-          <li><code>/api/monday/board/:boardId/items</code> - Get items from a board</li>
-          <li><code>/api/monday/item/:itemId/increment-touchpoints</code> - Increment touchpoints for an item</li>
-        </ul>
-      </div>
-      
-      <div class="endpoint-group">
-        <h3>Mailchimp Endpoints</h3>
-        <ul>
-          <li><code>/api/mailchimp</code> - Check Mailchimp connection status and account information</li>
-          <li><code>/api/mailchimp/list</code> - Get Mailchimp audience information</li>
-          <li><code>/api/mailchimp/list/members</code> - Get audience members (paginated)</li>
-          <li><code>/api/mailchimp/list/members</code> (POST) - Add a single member to the audience</li>
-          <li><code>/api/mailchimp/list/campaigns</code> - Get campaigns for the audience</li>
-          <li><code>/api/mailchimp/list/growth-history</code> - Get audience growth history</li>
-        </ul>
-      </div>
-      
-      <div class="endpoint-group">
-        <h3>Settings Endpoints</h3>
-        <ul>
-          <li><code>/api/settings</code> - View application settings</li>
-        </ul>
-      </div>
-      
       <footer>
         <p>Monday-Mailchimp Integration Service | Version 1.0.0 | ${formattedEnv} Environment</p>
       </footer>

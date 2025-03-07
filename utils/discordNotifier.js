@@ -3,7 +3,7 @@ const dotenv = require('dotenv');
 dotenv.config();
 
 // Get the webhook URL from environment variables
-const webhookUrl = process.env.NODE_ENV === 'test' ? process.env.DISCORD_WEBHOOK_URL_TEST : process.env.DISCORD_WEBHOOK_URL;
+const webhookUrl = process.env.DISCORD_WEBHOOK_URL;
 /**
  * Send a notification to Discord
  * @param {string} title - The notification title

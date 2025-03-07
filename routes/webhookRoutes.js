@@ -176,14 +176,4 @@ router.get('/process-campaign/:campaignId', async (req, res) => {
   }
 });
 
-// Add this simple test endpoint
-router.post('/test', (req, res) => {
-  console.log('Test endpoint hit with body:', req.body);
-  res.status(200).json({
-    success: true,
-    message: 'Test endpoint received your request',
-    receivedBody: req.body
-  });
-});
-
 module.exports = router; 
