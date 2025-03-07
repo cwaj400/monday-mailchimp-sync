@@ -51,6 +51,13 @@ function verifyMailchimpSignature(req) {
   );
 }
 
+router.get('/', (req, res) => {
+    res.status(200).json({
+      status: 'success',
+      message: 'Webhook endpoint is active and ready to receive webhook events'
+    });
+  });
+
 router.get('/mailchimp', (req, res) => {
     res.status(200).json({
       status: 'success',
@@ -123,9 +130,6 @@ router.post('/mailchimp', async (req, res) => {
     });
   }
 });
-
-
-
 
 
 // Add this route to manually process a campaign
