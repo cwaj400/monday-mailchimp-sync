@@ -16,7 +16,6 @@ const syncRoutes = require('./routes/syncRoutes');
 const settingsRoutes = require('./routes/settingsRoutes');
 const statusRoutes = require('./routes/statusRoutes');
 const homeRoute = require('./routes/homeRoute');
-const statusApiRoute = require('./routes/statusApiRoute');
 const healthRoute = require('./routes/healthRoute');
 
 

@@ -39,7 +39,6 @@ function validateEnv() {
     'MONDAY_BOARD_ID',
     'MONDAY_SIGNING_SECRET',
     'MONDAY_CLIENT_ID',
-    'MONDAY_AUTH_REDIRECT_URI',
   ];
   
   const mailchimpVars = [

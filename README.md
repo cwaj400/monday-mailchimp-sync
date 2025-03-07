@@ -63,7 +63,6 @@ MONDAY_API_KEY=your_monday_api_key
 MONDAY_BOARD_ID=your_monday_board_id
 MONDAY_SIGNING_SECRET=your_monday_signing_secret
 MONDAY_CLIENT_ID=your_monday_client_id
-MONDAY_AUTH_REDIRECT_URI=your_redirect_uri
 
 # Mailchimp
 MAILCHIMP_API_KEY=your_mailchimp_api_key
