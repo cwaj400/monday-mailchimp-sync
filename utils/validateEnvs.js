@@ -2,16 +2,8 @@ const dotenv = require('dotenv');
 const path = require('path');
 const fs = require('fs');
 
-// Determine which .env file to load based on NODE_ENV and VERCEL_ENV
+// Determine which .env file to load based on NODE_ENV
 function loadEnvFile() {
-  // Check if we're in a Vercel preview deployment
-  if (process.env.VERCEL_ENV === 'preview') {
-    console.log('Detected Vercel preview deployment');
-    // For preview deployments, we'll use environment variables set in the Vercel dashboard
-    // No need to load a .env file as Vercel injects the variables
-    return;
-  }
-  
   const nodeEnv = process.env.NODE_ENV || 'development';
   const envFile = `.env.${nodeEnv}`;
   const defaultEnvFile = '.env';

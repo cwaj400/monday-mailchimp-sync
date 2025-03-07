@@ -58,6 +58,13 @@ router.get('/', (req, res) => {
     });
   });
 
+router.post('/', (req, res) => {
+  res.status(200).json({
+    status: 'success',
+    message: 'Webhook endpoint is active and ready to receive webhook events'
+  });
+});
+
 router.get('/mailchimp', (req, res) => {
     res.status(200).json({
       status: 'success',
@@ -68,6 +75,12 @@ router.get('/mailchimp', (req, res) => {
 // Mailchimp webhook endpoint
 router.post('/mailchimp', async (req, res) => {
   try {
+
+    if (req.body.type === 'test') {
+      console.log('Received Mailchimp test webhook');
+      return res.status(200).json({ success: true, message: 'Test webhook received successfully' });
+    }
+
     //Verify webhook signature
     if (process.env.NODE_ENV === 'test' || process.env.NODE_ENV === 'development') {
       console.log('Development environment, skipping signature verification');
