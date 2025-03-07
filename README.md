@@ -77,8 +77,6 @@ DISCORD_WEBHOOK_URL=your_discord_webhook_url
 
 Optional variables:
 ```
-TEST_URL=http://localhost:4040
-TEST_KEY=test_key_value
 ```
 
 ## 📊 API Endpoints
@@ -87,16 +85,29 @@ TEST_KEY=test_key_value
 - `POST /api/webhooks/mailchimp` - Receive Mailchimp webhook events
 
 ### Monday.com
-- `GET /api/monday/contacts` - Get contacts from Monday.com
-- `POST /api/monday/update-status` - Update contact status
+- `GET /api/monday` - Check Monday.com connection status
+- `GET /api/monday/getLeads` - Get leads from Monday.com
+- `POST /api/monday/updateTouchpoints` - Update touchpoints for contacts
+- `POST /api/monday/webhook` - Handle Monday.com webhook events
+- `GET /api/monday/board/:boardId` - Get board information
+- `GET /api/monday/board/:boardId/items` - Get items from a board
+- `POST /api/monday/item/:itemId/increment-touchpoints` - Increment touchpoints for an item
 
 ### Mailchimp
-- `GET /api/mailchimp/subscribers` - Get subscribers from Mailchimp
-- `POST /api/mailchimp/subscribe` - Subscribe a contact to Mailchimp
+- `GET /api/mailchimp` - Check Mailchimp connection status and account information
+- `GET /api/mailchimp/list` - Get Mailchimp audience information
+- `GET /api/mailchimp/list/members` - Get audience members (paginated)
+- `POST /api/mailchimp/list/members` - Add a single member to the audience
+- `GET /api/mailchimp/list/campaigns` - Get campaigns for the audience
+- `GET /api/mailchimp/list/growth-history` - Get audience growth history
 
 ### Sync
 - `POST /api/sync/run` - Manually trigger synchronization
 - `GET /api/sync/status` - Check sync status
+
+### System
+- `GET /api/status` - Check service status
+- `GET /health` - Simple health check
 
 ## 🧪 Testing
 
@@ -224,4 +235,12 @@ This project is licensed under the ISC License - see the LICENSE file for detail
 - [Monday.com API](https://developer.monday.com/)
 - [Mailchimp Marketing API](https://mailchimp.com/developer/)
 - [Discord Webhooks](https://discord.com/developers/docs/resources/webhook)
-- [Snyk Security](https://snyk.io/) 
+- [Snyk Security](https://snyk.io/)
+
+## 🌐 Web Interface
+
+The application provides a simple web interface:
+
+- **Home Page**: View service status and available endpoints
+- **Status API**: Check service health at `/api/status`
+- **Health Check**: Simple health check at `/health` 

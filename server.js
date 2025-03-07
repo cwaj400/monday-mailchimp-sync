@@ -14,6 +14,11 @@ const mondayRoutes = require('./routes/mondayRoutes');
 const mailchimpRoutes = require('./routes/mailchimpRoutes');
 const syncRoutes = require('./routes/syncRoutes');
 const settingsRoutes = require('./routes/settingsRoutes');
+const statusRoutes = require('./routes/statusRoutes');
+const homeRoute = require('./routes/homeRoute');
+const statusApiRoute = require('./routes/statusApiRoute');
+const healthRoute = require('./routes/healthRoute');
+
 
 const app = express();
 
@@ -35,6 +40,9 @@ app.use('/api/monday', mondayRoutes);
 app.use('/api/mailchimp', mailchimpRoutes);
 app.use('/api/sync', syncRoutes);
 app.use('/settings', settingsRoutes);
+app.use('/api/status', statusRoutes);
+app.use('/', homeRoute);
+app.use('/', healthRoute);
 
 const PORT = process.env.PORT || 4040;
 app.listen(PORT, () => {
