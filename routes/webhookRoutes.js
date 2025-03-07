@@ -144,36 +144,4 @@ router.post('/mailchimp', async (req, res) => {
   }
 });
 
-
-// Add this route to manually process a campaign
-router.get('/process-campaign/:campaignId', async (req, res) => {
-  try {
-    const { campaignId } = req.params;
-    
-    if (!campaignId) {
-      return res.status(400).json({ error: 'Campaign ID is required' });
-    }
-    
-    // Create a mock request object with the campaign data
-    const mockReq = {
-      body: {
-        type: 'campaign',
-        data: {
-          id: campaignId,
-          status: 'sent'
-        }
-      }
-    };
-    
-    // Call the campaign handler
-    return await handleCampaignEvent(mockReq, res);
-  } catch (error) {
-    console.error('Error processing campaign:', error.message);
-    return res.status(500).json({
-      error: 'Failed to process campaign',
-      details: error.message
-    });
-  }
-});
-
 module.exports = router; 
