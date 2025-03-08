@@ -48,7 +48,7 @@ exports.handleCampaignEvent = async function(req, res) {
       let emailSubj = campaign.settings.subject_line;
       let emailPreview = campaign.settings.preview_text;
       
-      console.log(`Processing campaign: "${campaignTitle}" (ID: ${campaignId})`);
+      console.log(`Processing campaign: "${campaignTitle}"`);
       
       // Get campaign recipients
       console.log(`Fetching recipients for campaign ${campaignId}...`);
@@ -65,7 +65,7 @@ exports.handleCampaignEvent = async function(req, res) {
       );
       
       const recipients = recipientsResponse.data.sent_to || [];
-      console.log(`Found ${recipients.length} recipients for campaign ${campaignId}`);
+      console.log(`Found ${recipients.length} recipients for campaign`);
       
       // Process each recipient
       let successCount = 0;
@@ -112,13 +112,7 @@ exports.handleCampaignEvent = async function(req, res) {
       }
       
       console.log('Sending Discord notification');
-      console.log(campaignId);
-      console.log(campaignTitle);
-      console.log(recipients.length);
-      console.log(successCount);
-      console.log(notFoundCount);
-      console.log(failureCount);
-      
+
       // Send a summary notification
       await sendDiscordNotification(
         '📊 Campaign Recipients Processed',

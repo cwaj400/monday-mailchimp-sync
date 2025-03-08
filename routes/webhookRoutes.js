@@ -93,6 +93,7 @@ router.post('/mailchimp', async (req, res) => {
     
     // Log the webhook event
     const eventType = req.body.type;
+    console.log('Received Mailchimp webhook event:', eventType);
     
     // Handle different event types
     switch (eventType) {
