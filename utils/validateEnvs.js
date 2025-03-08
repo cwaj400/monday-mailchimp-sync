@@ -31,7 +31,8 @@ function validateEnv() {
   
   // Define required variables by category
   const systemVars = [
-    'NODE_ENV'
+    'NODE_ENV',
+    'APP_API_KEY'
   ];
   
   const mondayVars = [

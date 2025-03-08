@@ -35,11 +35,11 @@ validateEnv();
 
 // Routes
 app.use('/api/webhooks', webhookRoutes);
-app.use('/api/monday', mondayRoutes);
-app.use('/api/mailchimp', mailchimpRoutes);
-app.use('/api/status', apiKeyAuth);
+app.use('/api/monday', apiKeyAuth, mondayRoutes);
+app.use('/api/mailchimp', apiKeyAuth, mailchimpRoutes);
+app.use('/api/status', statusRoutes);
 app.use('/', homeRoute);
-app.use('/', healthRoute);
+app.use('/health', healthRoute);
 
 const PORT = process.env.PORT || 4040;
 app.listen(PORT, () => {
