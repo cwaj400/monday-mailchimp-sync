@@ -111,6 +111,14 @@ exports.handleCampaignEvent = async function(req, res) {
         await new Promise(resolve => setTimeout(resolve, 100));
       }
       
+      console.log('Sending Discord notification');
+      console.log(campaignId);
+      console.log(campaignTitle);
+      console.log(recipients.length);
+      console.log(successCount);
+      console.log(notFoundCount);
+      console.log(failureCount);
+      
       // Send a summary notification
       await sendDiscordNotification(
         '📊 Campaign Recipients Processed',

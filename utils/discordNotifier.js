@@ -14,6 +14,8 @@ const webhookUrl = process.env.DISCORD_WEBHOOK_URL;
  */
 async function sendDiscordNotification(title, message, fields = {}, color = '3447003') {
 
+  console.log('About to send Discord notification');
+  console.log('Sending Discord notification to:', webhookUrl);
   if (!webhookUrl) {
     return false;
   }
@@ -25,6 +27,7 @@ async function sendDiscordNotification(title, message, fields = {}, color = '344
       value: String(value),
       inline: true
     }));
+    console.log('Fields:', embedFields);
 
     // Create the payload
     const payload = {
@@ -36,7 +39,7 @@ async function sendDiscordNotification(title, message, fields = {}, color = '344
         timestamp: new Date().toISOString()
       }]
     };
-
+    console.log('Payload:', payload);
     // Send the notification
     const response = await axios.post(webhookUrl, payload);
     return {
