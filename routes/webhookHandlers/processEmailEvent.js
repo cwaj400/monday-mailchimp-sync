@@ -32,26 +32,24 @@ exports.processEmailEvent = async function(email, eventType, eventData) {
     
     // Add a note to the Monday item
     const noteResult = await addNoteToMondayItem(mondayItem.id, eventData.noteText);
-    
+    let touchpointResult;
+
     if (eventType === 'send' || eventType === 'campaign') {
       // Increment touchpoints
-      const touchpointResult = await incrementTouchpoints(mondayItem.id);
-    }
+      touchpointResult = await incrementTouchpoints(mondayItem.id);
       
-    // Handle success/failure notifications
-    if (touchpointResult.success) {
       
-      await sendDiscordNotification(
-        '✅ Touchpoint Updated Successfully',
-        `A touchpoint has been added for ${email} based on a Mailchimp ${eventType} event.`,
-        {
-          'Contact': email,
-          'Monday ID': mondayItem.id,
-          'Previous Value': touchpointResult.previousValue,
-          'New Value': touchpointResult.newValue,
-          'Event Type': eventType,
-          'Campaign': eventData.campaignTitle,
-          'Note Added': noteResult.success ? 'Yes' : 'No'
+      if (touchpointResult.success) {
+        await sendDiscordNotification(
+          '✅ Touchpoint Updated Successfully',
+          `A touchpoint has been added for ${email} based on a Mailchimp ${eventType} event.`,
+          {
+            'Contact': email,
+            'Monday ID': mondayItem.id,
+            'Previous Value': touchpointResult.previousValue,
+            'New Value': touchpointResult.newValue,
+            'Event Type': eventType,
+            'Campaign': eventData.campaignTitle,
         },
         '57F287' // Green color for success
       );
@@ -70,19 +68,47 @@ exports.processEmailEvent = async function(email, eventType, eventData) {
         'ED4245' // Red color for errors
       );
     }
-    
-    // Return result
-    return {
-      success: touchpointResult.success && noteResult.success,
-      message: touchpointResult.success ? 
-        `Touchpoints incremented and note added for ${email}` : 
-        `Failed to update touchpoints for ${email}`,
-      itemId: mondayItem.id,
-      previousValue: touchpointResult.previousValue,
-      newValue: touchpointResult.newValue,
-      noteAdded: noteResult.success,
-      event: eventType,
-      campaign: eventData.campaignTitle
-    };
-  }
   
+  } else {
+    if (addNoteResult.success) {  
+      await sendDiscordNotification(
+        '✅ Note Added Successfully',
+        `A note has been added for ${email} based on a Mailchimp ${eventType} event.`,
+        {
+          'Contact': email,
+          'Monday ID': mondayItem.id,
+          'Event Type': eventType,
+          'Campaign': eventData.campaignTitle,
+          'Text': addNoteResult.text,
+          'Note Added': addNoteResult.success ? 'Yes' : 'No'
+        },
+        '57F287' // Green color for success
+      );
+    } else {
+      await sendDiscordNotification(
+        '❌ Failed to Add Note',
+        `We tried to add a note for ${email} based on a Mailchimp ${eventType} event, but the update failed.`,
+        {
+          'Contact': email,
+          'Monday ID': mondayItem.id,
+          'Error': addNoteResult.error,
+          'Event Type': eventType,
+          'Campaign': eventData.campaignTitle,
+          'Text': addNoteResult.text,
+          'Note Added': addNoteResult.success ? 'Yes' : 'No'
+        },
+        'ED4245' // Red color for errors
+      );
+    }
+  }
+  return {
+    success: touchpointResult.success && noteResult.success,
+    message: touchpointResult.success ? 
+      `Touchpoints incremented and note added for ${email}` : 
+      `Failed to update touchpoints for ${email}`,
+    itemId: mondayItem.id,
+    noteAdded: noteResult.success,
+    event: eventType,
+    campaign: eventData.campaignTitle
+  };
+}
