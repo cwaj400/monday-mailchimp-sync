@@ -6,14 +6,17 @@
       "use": "@vercel/node"
     }
   ],
-  "routes": [
+  "rewrites": [
+    { "source": "/api/(.*)", "destination": "server.js" },
+    { "source": "/(.*)", "destination": "server.js" }
+  ],
+  "headers": [
     {
-      "src": "/api/(.*)",
-      "dest": "server.js"
-    },
-    {
-      "src": "/(.*)",
-      "dest": "server.js"
+      "source": "/api/webhooks/mailchimp",
+      "headers": [
+        { "key": "Access-Control-Allow-Headers", "value": "x-mailchimp-signature, x-mandrill-signature, content-type" },
+        { "key": "Access-Control-Expose-Headers", "value": "x-mailchimp-signature, x-mandrill-signature" }  
+      ]
     }
   ]
 } 

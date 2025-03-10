@@ -50,7 +50,7 @@ exports.handleSubscriberEvent = async function(req, res, eventType) {
       switch (eventType) {
         case 'subscribe':
           mailchimpStatus = 'Subscribed';
-          noteText = `✅ Subscribed to Mailchimp: ${email} was subscribed to Mailchimp list "${listId}"}`;
+          noteText = `✅ Subscribed to Mailchimp: ${email} was subscribed to Mailchimp list "${listId}"`;
           break;
         
         case 'unsubscribe':
