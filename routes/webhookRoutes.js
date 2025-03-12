@@ -1,5 +1,6 @@
 const express = require('express');
 const router = express.Router();
+const crypto = require('crypto');
 const { sendDiscordNotification } = require('../utils/discordNotifier');
 const { handleSubscriberEvent } = require('./webhookHandlers/handleSubscriberEvent.js');
 const { handleCampaignEvent } = require('./webhookHandlers/handleCampaignEvent.js');
