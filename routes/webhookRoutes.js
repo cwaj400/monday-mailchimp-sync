@@ -137,16 +137,14 @@ router.post('/mailchimp', async (req, res) => {
     console.log('Received Mailchimp webhook payload:', req.body);
     // Log the webhook event
     const eventType = req.body.event;
-    const md = req.body.mandrill_events.event;
-
-    console.log('Received Mailchimp webhook event:', eventType);
-    console.log('Received Mailchimp webhook event:', md);
     
     // Handle different event types
-    switch (eventType) {
-      case 'subscribe':
-        return await handleSubscriberEvent(req, res, 'subscribe');
-      
+    req.body.mandrill_events.forEach(async (event) => {
+      console.log('Received Mailchimp webhook event:', event.event);
+      switch (event.event) {
+        case 'subscribe':
+          return await handleSubscriberEvent(req, res, 'subscribe');
+        
       case 'unsubscribe':
         return await handleSubscriberEvent(req, res, 'unsubscribe');
       
@@ -169,10 +167,11 @@ router.post('/mailchimp', async (req, res) => {
         return await handleEmailClick(req, res);
       
       default:
-        console.log('Received Mailchimp webhook event:', eventType);
+        console.log('Received Mailchimp webhook event:', event.event);
         // For other event types, just acknowledge receipt
         return res.json({ success: true, message: 'Webhook received', event: eventType });
-    }
+      }
+    });
   } catch (error) {
     await sendDiscordNotification(
       '❌ Mailchimp Webhook Error',
