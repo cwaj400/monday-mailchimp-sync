@@ -10,19 +10,6 @@ function loadEnvFile() {
   
   console.log(`Attempting to load environment from ${envFile}`);
   
-  // Check if the environment-specific file exists
-  const envPath = path.resolve(process.cwd(), envFile);
-  const defaultEnvPath = path.resolve(process.cwd(), defaultEnvFile);
-  
-  if (fs.existsSync(envPath)) {
-    console.log(`Loading environment from ${envFile}`);
-    dotenv.config({ path: envPath });
-  } else if (fs.existsSync(defaultEnvPath)) {
-    console.log(`Environment-specific file not found. Loading from ${defaultEnvFile}`);
-    dotenv.config({ path: defaultEnvPath });
-  } else {
-    console.warn('No .env file found. Using existing environment variables.');
-  }
 }
 
 function validateEnv() {

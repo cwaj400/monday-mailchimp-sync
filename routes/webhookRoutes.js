@@ -34,6 +34,7 @@ router.get('/mailchimp', (req, res) => {
 // Mailchimp webhook endpoint
 router.post('/mailchimp', async (req, res) => {
   try {
+    console.log('payload received.');
 
     console.log('Received Mailchimp webhook payload:', JSON.stringify(req.body, null, 2));
 
@@ -63,13 +64,13 @@ router.post('/mailchimp', async (req, res) => {
       case 'campaign':
         return await handleCampaignEvent(req, res);
       
-      case 'send':
+      case 'is sent':
         return await handleEmailSend(req, res);
       
-      case 'open':
+      case 'is opened':
         return await handleEmailOpen(req, res);
       
-      case 'click':
+      case 'is clicked':
         return await handleEmailClick(req, res);
       
       default:
