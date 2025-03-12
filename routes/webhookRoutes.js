@@ -35,6 +35,8 @@ router.get('/mailchimp', (req, res) => {
 router.post('/mailchimp', async (req, res) => {
   try {
 
+    console.log('Received Mailchimp webhook payload:', JSON.stringify(req.body, null, 2));
+
     if (req.body.type === 'test') {
       console.log('Received Mailchimp test webhook');
       return res.status(200).json({ success: true, message: 'Test webhook received successfully' });
@@ -71,6 +73,7 @@ router.post('/mailchimp', async (req, res) => {
         return await handleEmailClick(req, res);
       
       default:
+        console.log('Received Mailchimp webhook event:', eventType);
         // For other event types, just acknowledge receipt
         return res.json({ success: true, message: 'Webhook received', event: eventType });
     }
