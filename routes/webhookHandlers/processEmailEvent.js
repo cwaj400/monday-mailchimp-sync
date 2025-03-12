@@ -32,6 +32,7 @@ exports.processEmailEvent = async function(email, eventType, eventData) {
     
     // Add a note to the Monday item
     const noteResult = await addNoteToMondayItem(mondayItem.id, eventData.noteText);
+    console.log('added note to monday item');
     let touchpointResult;
 
     if (eventType === 'send' || eventType === 'campaign') {
@@ -40,6 +41,7 @@ exports.processEmailEvent = async function(email, eventType, eventData) {
       
       
       if (touchpointResult.success) {
+        console.log('touchpoint updated successfully');
         await sendDiscordNotification(
           '✅ Touchpoint Updated Successfully',
           `A touchpoint has been added for ${email} based on a Mailchimp ${eventType} event.`,
