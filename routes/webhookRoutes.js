@@ -136,10 +136,13 @@ router.post('/mailchimp', async (req, res) => {
     }
     console.log('Received Mailchimp webhook payload:', req.body);
     // Log the webhook event
-    const eventType = req.body.event;
+    const eventType = req.body;
+    const md = req.body.mandrill_events[0].event;
+    console.log('Received Mailchimp webhook event:', eventType);
+    console.log('Received Mailchimp webhook event:', md);
     
     // Handle different event types
-    req.body.mandrill_events.forEach(async (event) => {
+    req.body.forEach(async (event) => {
       console.log('Received Mailchimp webhook event:', event.event);
       switch (event.event) {
         case 'subscribe':
