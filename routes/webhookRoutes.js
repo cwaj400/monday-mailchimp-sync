@@ -130,18 +130,11 @@ router.get('/mailchimp', (req, res) => {
 router.post('/mailchimp', async (req, res) => {
   try {
 
-    if (verifyMailchimpSignature(req)) {
-      console.log('Mailchimp webhook signature verified');
-    } else {
-      console.log('Mailchimp webhook signature verification failed');
-      return res.status(401).json({ error: 'Unauthorized' });
-    }
-
     if (req.body.type === 'test') {
       console.log('Received Mailchimp test webhook');
       return res.status(200).json({ success: true, message: 'Test webhook received successfully' });
     }
-    
+    console.log('Received Mailchimp webhook payload:', JSON.stringify(req.body, null, 2));
     // Log the webhook event
     const eventType = req.body.type;
     console.log('Received Mailchimp webhook event:', eventType);
