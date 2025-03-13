@@ -68,6 +68,9 @@ router.post('/mailchimp', async (req, res) => {
           return res.json({ success: true, message: 'Webhook received', event: event.event });
         }
       }
+    } else {
+      console.log('Received Mailchimp webhook event:', req.body);
+      return res.json({ success: true, message: 'Webhook received', event: JSON.parse(req.body) });
     }
   } catch (error) {
     await sendDiscordNotification(
