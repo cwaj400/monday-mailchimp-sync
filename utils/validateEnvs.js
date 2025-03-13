@@ -51,14 +51,6 @@ function validateEnv() {
   const missingMailchimp = mailchimpVars.filter(v => !process.env[v]);
   const missingDiscord = discordVars.filter(v => !process.env[v]);
   
-  // Log missing optional variables as warnings
-  const missingOptional = optionalVars.filter(v => !process.env[v]);
-  if (missingOptional.length > 0) {
-    console.warn(`Missing optional environment variables: ${missingOptional.join(', ')}`);
-  } else {
-    console.log('✅ All optional environment variables are set. Audience name: ', process.env.MAILCHIMP_AUDIENCE_NAME);
-  }
-  
   // Exit if any required variables are missing
   if (missingSystem.length > 0 || missingMonday.length > 0 || 
       missingMailchimp.length > 0 || missingDiscord.length > 0) {

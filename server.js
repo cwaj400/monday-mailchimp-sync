@@ -30,8 +30,7 @@ app.use(bodyParser.urlencoded({ extended: true }));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// Call validateEnv before any other imports or code
-validateEnv();
+//validateEnv();
 
 // Routes
 app.use('/api/webhooks', webhookRoutes);
