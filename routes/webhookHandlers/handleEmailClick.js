@@ -3,12 +3,11 @@ const dotenv = require('dotenv');
 
 dotenv.config();
 
-exports.handleEmailClick = async function(req, res) {
+exports.handleEmailClick = async function(event, res) {
     console.log('handleEmailClick');
-    console.log({body: req.body.data});
-    const email = req.body.data.email;
-    const campaignTitle = req.body.data.campaign_title || 'Unknown Campaign';
-    const url = req.body.data.url || 'a link';
+    const email = event.msg.email;
+    const campaignTitle = event.msg.subject || 'Unknown Campaign';
+    const url = event.msg.url || 'a link';
     
     if (!email) {
       console.error('Email not provided in webhook data');
