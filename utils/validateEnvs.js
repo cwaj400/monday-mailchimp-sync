@@ -40,6 +40,10 @@ function validateEnv() {
     'DISCORD_WEBHOOK_URL'
   ];
   
+  const sentryVars = [
+    'SENTRY_DSN'
+  ];
+  
   // Optional variables that are nice to have but not required
   const optionalVars = [
     'MAILCHIMP_AUDIENCE_NAME',
@@ -50,10 +54,12 @@ function validateEnv() {
   const missingMonday = mondayVars.filter(v => !process.env[v]);
   const missingMailchimp = mailchimpVars.filter(v => !process.env[v]);
   const missingDiscord = discordVars.filter(v => !process.env[v]);
+  const missingSentry = sentryVars.filter(v => !process.env[v]);
   
   // Exit if any required variables are missing
   if (missingSystem.length > 0 || missingMonday.length > 0 || 
-      missingMailchimp.length > 0 || missingDiscord.length > 0) {
+      missingMailchimp.length > 0 || missingDiscord.length > 0 ||
+      missingSentry.length > 0) {
     
     if (missingSystem.length > 0) {
       console.error(`Missing required system variables: ${missingSystem.join(', ')}`);
@@ -67,6 +73,9 @@ function validateEnv() {
     if (missingDiscord.length > 0) {
       console.error(`Missing required Discord variables: ${missingDiscord.join(', ')}`);
     }
+    if (missingSentry.length > 0) {
+      console.error(`Missing required Sentry variables: ${missingSentry.join(', ')}`);
+    }
     
     // Only exit in production; in development/test, just warn
     if (process.env.NODE_ENV === 'production') {
@@ -77,6 +86,14 @@ function validateEnv() {
     }
   } else {
     console.log('✅ All required environment variables are set');
+  }
+  
+  // Check for missing optional variables
+  const missingOptional = optionalVars.filter(v => !process.env[v]);
+  if (missingOptional.length > 0) {
+    console.warn(`Missing optional environment variables: ${missingOptional.join(', ')}`);
+  } else {
+    console.log('✅ All optional environment variables are set');
   }
 }
 

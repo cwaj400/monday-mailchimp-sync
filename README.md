@@ -84,6 +84,18 @@ To bypass Snyk check during commits (use sparingly):
 SKIP_SNYK=true git commit -m "Your commit message"
 ```
 
+## 📊 Error Tracking
+
+This project uses Sentry for error tracking and performance monitoring. Errors are automatically captured and reported to Sentry.
+
+To set up Sentry:
+1. Create a Sentry account at [sentry.io](https://sentry.io)
+2. Create a new project for Node.js
+3. Add your Sentry DSN to the environment variables:
+```
+SENTRY_DSN=https://your-sentry-dsn@o123456.ingest.sentry.io/1234567
+```
+
 ## 🚢 Deployment
 
 ### Vercel
