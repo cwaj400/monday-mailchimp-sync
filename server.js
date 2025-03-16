@@ -4,6 +4,7 @@ const express = require('express');
 const bodyParser = require('body-parser');
 const cors = require('cors');
 const { apiKeyAuth } = require('./utils/authMiddleware');
+const Sentry = require('@sentry/node');
 const { setupExpressErrorHandler } = require('./utils/sentry');
 
 // Routes
@@ -35,9 +36,95 @@ app.use('/api/status', statusRoutes);
 app.use('/', homeRoute);
 app.use('/health', healthRoute);
 
-// Add a test route for Sentry
+// Add test routes for Sentry
 app.get("/debug-sentry", function mainHandler(req, res) {
   throw new Error("My first Sentry error!");
+});
+
+// Test with the new span-based API
+app.get("/debug-sentry/span", function(req, res) {
+  try {
+    // Add some breadcrumbs
+    Sentry.addBreadcrumb({
+      message: 'User accessed debug span route',
+      category: 'navigation',
+      data: { 
+        path: '/debug-sentry/span',
+        query: req.query
+      }
+    });
+    
+    // Create a span
+    const span = Sentry.startInactiveSpan({
+      name: "test-span",
+      op: "test",
+      attributes: {
+        path: '/debug-sentry/span',
+        query: req.query
+      }
+    });
+    
+    // Simulate an error
+    try {
+      const obj = null;
+      obj.nonExistentMethod();
+    } catch (error) {
+      Sentry.captureException(error);
+      span.end();
+      res.status(500).send('Error captured with span and sent to Sentry');
+      return;
+    }
+    
+    span.end();
+    res.send('Span completed successfully');
+  } catch (error) {
+    console.error('Error in span test route:', error);
+    res.status(500).send('Error in span test route');
+  }
+});
+
+// Test with performance monitoring using spans
+app.get("/debug-sentry/performance", async function(req, res) {
+  try {
+    // Create a parent span
+    const parentSpan = Sentry.startInactiveSpan({
+      name: "test-performance",
+      op: "test",
+      forceTransaction: true
+    });
+    
+    // Create a child span
+    const childSpan1 = Sentry.startInactiveSpan({
+      name: "test-operation-1",
+      op: "test.operation"
+    });
+    
+    // Simulate some work
+    await new Promise(resolve => setTimeout(resolve, 500));
+    
+    // End the first child span
+    childSpan1.end();
+    
+    // Create another child span
+    const childSpan2 = Sentry.startInactiveSpan({
+      name: "test-operation-2",
+      op: "test.operation"
+    });
+    
+    // Simulate more work
+    await new Promise(resolve => setTimeout(resolve, 300));
+    
+    // End the second child span
+    childSpan2.end();
+    
+    // End the parent span
+    parentSpan.end();
+    
+    res.send('Performance data sent to Sentry');
+  } catch (error) {
+    console.error('Error in performance test route:', error);
+    res.status(500).send('Error in performance test route');
+  }
 });
 
 // Set up Sentry error handler

@@ -14,4 +14,4 @@ Sentry.init({
   tracesSampleRate: 1.0,
 });
 
-console.log(`✅ Sentry initialized in ${process.env.NODE_ENV || 'development'} environment`); 
+console.log(`✅ Sentry initialized in ${process.env.NODE_ENV || 'development'} environment`);

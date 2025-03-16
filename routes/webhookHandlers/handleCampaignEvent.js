@@ -2,38 +2,76 @@ const axios = require('axios');
 const dotenv = require('dotenv');
 const { sendDiscordNotification } = require('../../utils/discordNotifier');
 const { findMondayItemByEmail, incrementTouchpoints, addNoteToMondayItem } = require('../../utils/mondayService');
-const { captureException, addBreadcrumb, startTransaction } = require('../../utils/sentry');
+const { captureException, addBreadcrumb, startSpanManual, Sentry } = require('../../utils/sentry');
 dotenv.config();
 
 const MAILCHIMP_API_KEY = process.env.MAILCHIMP_API_KEY;
 const MAILCHIMP_SERVER_PREFIX = process.env.MAILCHIMP_SERVER_PREFIX;
 
 exports.handleCampaignEvent = async function(req, res) {
-    console.log('handleCampaignEvent');
-    
-    // Start a Sentry transaction
-    const transaction = startTransaction('handleCampaignEvent', 'webhook.campaign');
-    
-    // Handle both direct event objects and req objects
-    const eventData = req.data ? req : req.body;
-    const campaignId = eventData.data.id;
-    const status = eventData.data.status;
-    const subject = eventData.data.subject || 'No Subject';
-    
-    // Add breadcrumb for campaign event
-    addBreadcrumb(
-      'Campaign event received', 
-      'webhook', 
-      {
-        campaignId,
-        status,
-        subject
-      }
-    );
-    
-    console.log(`Campaign ${campaignId} status: ${status}, subject: ${subject}`);
+    console.info('handleCampaignEvent');
+    let span = null;
     
     try {
+      // Start a Sentry span (no callback in v9.x)
+      span = startSpanManual({
+        name: 'handleCampaignEvent',
+        op: 'webhook.campaign',
+        forceTransaction: true
+      });
+
+      let campaignId = null;
+      let status = null;
+      let subject = null;
+      
+      try {
+        console.log('req', req);
+        const eventData = req.data ? req : req.body;
+        campaignId = eventData.data.id;
+        status = eventData.data.status;
+        subject = eventData.data.subject || 'No Subject';
+
+        addBreadcrumb('Campaign event received', 'webhook', {
+          campaignId: campaignId,
+          status: status,
+          subject: subject,
+          eventData: eventData
+        });
+        
+
+      } catch (error) {
+        console.error('Error in handleCampaignEvent:', error.message);
+        if (span) {
+          Sentry.captureException(error.message, {
+            level: 'error',
+            extra: {
+              campaignId: campaignId,
+              status: status,
+              subject: subject,
+              error: error.message
+            }
+          });
+          span.end();
+        }
+        captureException(error, {
+          context: 'handleCampaignEvent'
+        });
+
+      }
+
+      // Add breadcrumb for campaign event
+      addBreadcrumb(
+        'Campaign event received', 
+        'webhook', 
+        {
+          campaignId,
+          status,
+          subject
+        }
+      );
+      
+      console.log(`Campaign ${campaignId} status: ${status}, subject: ${subject}`);
+      
       if (!MAILCHIMP_API_KEY || !MAILCHIMP_SERVER_PREFIX) {
         throw new Error('Mailchimp API key not configured correctly');
       }
@@ -49,6 +87,7 @@ exports.handleCampaignEvent = async function(req, res) {
         
         // If res is available, send response, otherwise just log
         if (res) {
+          if (span) span.end();
           return res.json({
             success: true,
             message: `Campaign ${campaignId} status updated to ${status}`,
@@ -56,6 +95,7 @@ exports.handleCampaignEvent = async function(req, res) {
           });
         } else {
           console.log(`Campaign ${campaignId} status updated to ${status}, not processing further`);
+          if (span) span.end();
           return {
             success: true,
             message: `Campaign ${campaignId} status updated to ${status}`,
@@ -71,34 +111,12 @@ exports.handleCampaignEvent = async function(req, res) {
         { campaignId }
       );
       
-      // Get campaign details
-      console.log(`Fetching details for campaign ${campaignId}...`);
-      const campaignResponse = await axios.get(
-        `https://${MAILCHIMP_SERVER_PREFIX}.api.mailchimp.com/3.0/campaigns/${campaignId}`,
-        {
-          headers: {
-            'Authorization': `Basic ${Buffer.from(`apikey:${MAILCHIMP_API_KEY}`).toString('base64')}`
-          }
-        }
-      );
-      
       const campaign = campaignResponse.data;
       const campaignTitle = campaign.settings.title || subject || 'Untitled Campaign';
       const listId = campaign.recipients.list_id || eventData.data.list_id;
       console.log('campaign');
       let emailSubj = campaign.settings.subject_line || subject;
       let emailPreview = campaign.settings.preview_text || '';
-      
-      // Add breadcrumb for campaign details
-      addBreadcrumb(
-        'Campaign details retrieved', 
-        'api.mailchimp', 
-        { 
-          campaignTitle, 
-          listId, 
-          emailSubj 
-        }
-      );
       
       console.log(`Processing campaign: "${campaignTitle}"`);
       
@@ -108,6 +126,13 @@ exports.handleCampaignEvent = async function(req, res) {
         'api.mailchimp', 
         { campaignId }
       );
+      
+      // Create a child span for recipients API request
+      const recipientsSpan = span ? Sentry.startInactiveSpan({
+        name: 'fetch_campaign_recipients',
+        op: 'http.client',
+        attributes: { campaignId }
+      }) : null;
       
       // Get campaign recipients
       console.log(`Fetching recipients for campaign ${campaignId}...`);
@@ -123,6 +148,8 @@ exports.handleCampaignEvent = async function(req, res) {
         }
       );
       
+      if (recipientsSpan) recipientsSpan.end();
+      
       const recipients = recipientsResponse.data.sent_to || [];
       console.log(`Found ${recipients.length} recipients for campaign`);
       
@@ -132,6 +159,16 @@ exports.handleCampaignEvent = async function(req, res) {
         'api.mailchimp', 
         { recipientCount: recipients.length }
       );
+      
+      // Create a child span for processing recipients
+      const processingSpan = span ? Sentry.startInactiveSpan({
+        name: 'process_recipients',
+        op: 'task',
+        attributes: { 
+          recipientCount: recipients.length,
+          campaignTitle
+        }
+      }) : null;
       
       // Process each recipient
       let successCount = 0;
@@ -249,6 +286,8 @@ exports.handleCampaignEvent = async function(req, res) {
         await new Promise(resolve => setTimeout(resolve, 100));
       }
       
+      if (processingSpan) processingSpan.end();
+      
       console.log('Sending Discord notification');
       
       // Add breadcrumb for Discord notification
@@ -291,9 +330,9 @@ exports.handleCampaignEvent = async function(req, res) {
         failureCount
       };
       
-      // Finish the transaction
-      if (transaction) {
-        transaction.finish();
+      // Finish the span
+      if (span) {
+        span.end();
       }
       
       // If res is available, send response, otherwise just return the result
@@ -307,34 +346,44 @@ exports.handleCampaignEvent = async function(req, res) {
       
       // Capture the exception with context
       captureException(error, {
-        campaignId,
-        status,
-        subject,
-        context: 'Campaign processing'
+        context: 'Campaign processing',
+        campaignId: campaignId,
+        status: status,
+        subject: subject
       });
+      
+      // Set tags for easier filtering in Sentry dashboard
+      Sentry.setTag('error.context', 'Campaign processing');
+      Sentry.setTag('campaignId', campaignId || 'unknown');
       
       // Send error notification
       await sendDiscordNotification(
         '❌ Failed to Process Campaign',
         'An error occurred while processing campaign recipients',
         {
-          'Campaign ID': campaignId,
-          'Subject': subject,
+          'Campaign ID': campaignId || 'unknown',
+          'Subject': subject || 'unknown',
           'Error': error.message,
           'Stack Trace': error.stack?.substring(0, 300) + '...'
         },
         'ED4245' // Red color for errors
       );
       
-      // Finish the transaction with error status
-      if (transaction) {
-        transaction.finish();
+      // Finish the span with error status
+      if (span) {
+        span.setStatus({ code: Sentry.SpanStatusType.ERROR });
+        // Add error details to span
+        span.setAttribute('error', true);
+        span.setAttribute('error.message', error.message);
+        span.setAttribute('error.type', error.name);
+        span.end();
       }
       
       // Create error result
       const errorResult = {
         error: 'Failed to process campaign',
-        details: error.message
+        details: error.message,
+        campaignId: campaignId
       };
       
       // If res is available, send response, otherwise just return the error

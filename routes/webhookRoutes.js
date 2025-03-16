@@ -6,7 +6,7 @@ const { handleCampaignEvent } = require('./webhookHandlers/handleCampaignEvent.j
 const { handleEmailSend } = require('./webhookHandlers/handleEmailSend.js');
 const { handleEmailOpen } = require('./webhookHandlers/handleEmailOpen.js');
 const { handleEmailClick } = require('./webhookHandlers/handleEmailClick.js');
-const { captureException, addBreadcrumb, startTransaction } = require('../utils/sentry');
+const { captureException, addBreadcrumb, startSpanManual, Sentry } = require('../utils/sentry');
 
 const dotenv = require('dotenv');
 dotenv.config();
@@ -35,9 +35,16 @@ router.get('/mailchimp', (req, res) => {
 
 // Mailchimp webhook endpoint
 router.post('/mailchimp', async (req, res) => {
+  // Create a span for performance monitoring
+  let span = null;
+  
   try {
-    // Start a Sentry transaction
-    const transaction = startTransaction('mailchimp_webhook', 'webhook.receive');
+    // Start a Sentry span for performance monitoring (no callback in v9.x)
+    span = startSpanManual({
+      name: 'mailchimp_webhook',
+      op: 'webhook.receive',
+      forceTransaction: true
+    });
     
     // Add breadcrumb for webhook received
     addBreadcrumb(
@@ -53,13 +60,19 @@ router.post('/mailchimp', async (req, res) => {
     res.status(200).json({ success: true, message: 'Webhook received, processing in background' });
 
     // Process the webhook asynchronously
-    processWebhook(req, res, transaction).catch(error => {
+    processWebhook(req, res, span).catch(error => {
       console.error('Error in background processing:', error);
       captureException(error, {
         context: 'Background webhook processing',
         webhookType: req.body.type || 'unknown',
         hasMandrill: !!req.body.mandrill_events
       });
+      
+      // Make sure to end the span in case of error
+      if (span) {
+        span.setStatus({ code: Sentry.SpanStatusType.ERROR });
+        span.end();
+      }
     });
   } catch (error) {
     console.error('Error in webhook endpoint:', error);
@@ -67,24 +80,35 @@ router.post('/mailchimp', async (req, res) => {
       context: 'Webhook endpoint',
       body: req.body
     });
+    
+    // Make sure to end the span in case of error
+    if (span) {
+      span.setStatus({ code: Sentry.SpanStatusType.ERROR });
+      span.end();
+    }
   }
 });
 
 // Separate function to process webhooks asynchronously
-async function processWebhook(req, res, transaction) {
+async function processWebhook(req, res, span) {
   try {
     if (req.body.type === 'test') {
       console.log('Received Mailchimp test webhook');
       addBreadcrumb('Test webhook received', 'webhook', { body: req.body });
       
-      if (transaction) {
-        transaction.finish();
+      if (span) {
+        span.end();
       }
       return;
     }
 
     // Handle Mandrill events (transactional emails)
     if (req.body.mandrill_events) {
+      // Create a child span for Mandrill processing
+      const mandrillSpan = span ? Sentry.startInactiveSpan({
+        name: 'process_mandrill_events',
+        op: 'webhook.mandrill',
+      }) : null;
       
       addBreadcrumb('Processing Mandrill events', 'webhook', { 
         body: req.body.mandrill_events.substring(0, 200) + '...' 
@@ -99,7 +123,17 @@ async function processWebhook(req, res, transaction) {
         '0099FF' // Blue color for Mandrill events
       );
 
+      // Create a child span for JSON parsing
+      const parseSpan = mandrillSpan ? Sentry.startInactiveSpan({
+        name: 'parse_mandrill_json',
+        op: 'json.parse',
+      }) : null;
+      
       const mandrillEvents = JSON.parse(req.body.mandrill_events);
+      
+      if (parseSpan) {
+        parseSpan.end();
+      }
 
       console.log(`Processing ${mandrillEvents.length} Mandrill events`);
     
@@ -110,76 +144,113 @@ async function processWebhook(req, res, transaction) {
           email: event.msg?.email
         });
         
-        switch (event.event) {
-          case 'subscribe':
-            await handleSubscriberEvent(event, null, 'subscribe');
-            break;
-          
-          case 'campaign':
-            await handleCampaignEvent(event, null);
-            break;
-          
-          case 'send':
-            await handleEmailSend(event, null);
-            break;
-          
-          case 'open':
-            await handleEmailOpen(event, null);
-            break;
-          
-          default:
-            console.log('Unhandled Mandrill event type:', event.event);
-            addBreadcrumb('Unhandled Mandrill event', 'webhook.mandrill', { 
-              eventType: event.event 
-            }, 'warning');
+        // Create a child span for each event type
+        const eventSpan = mandrillSpan ? Sentry.startInactiveSpan({
+          name: `process_mandrill_${event.event}`,
+          op: `webhook.mandrill.${event.event}`,
+          attributes: {
+            email: event.msg?.email,
+            eventType: event.event
+          }
+        }) : null;
+        
+        try {
+          switch (event.event) {
+            case 'subscribe':
+              await handleSubscriberEvent(event, null, 'subscribe');
+              break;
+            
+            case 'campaign':
+              await handleCampaignEvent(event, null);
+              break;
+            
+            case 'send':
+              await handleEmailSend(event, null);
+              break;
+            
+            case 'open':
+              await handleEmailOpen(event, null);
+              break;
+            
+            default:
+              console.log('Unhandled Mandrill event type:', event.event);
+              addBreadcrumb('Unhandled Mandrill event', 'webhook.mandrill', { 
+                eventType: event.event 
+              }, 'warning');
+          }
+        } finally {
+          if (eventSpan) {
+            eventSpan.end();
+          }
         }
+      }
+      
+      if (mandrillSpan) {
+        mandrillSpan.end();
       }
     } 
     // Handle regular Mailchimp campaign webhooks
     else if (req.body.type) {
+      // Create a child span for Mailchimp processing
+      const mailchimpSpan = span ? Sentry.startInactiveSpan({
+        name: `process_mailchimp_${req.body.type}`,
+        op: `webhook.mailchimp.${req.body.type}`,
+        attributes: {
+          type: req.body.type,
+          data: req.body.data
+        }
+      }) : null;
+      
       console.log('Processing Mailchimp campaign webhook:', req.body.type);
       addBreadcrumb('Processing Mailchimp webhook', 'webhook.mailchimp', { 
         type: req.body.type,
         data: req.body.data
       });
       
-      switch (req.body.type) {
-        case 'subscribe':
-          await handleSubscriberEvent(req.body, null, 'subscribe');
-          break;
-        
-        case 'unsubscribe':
-          await handleSubscriberEvent(req.body, null, 'unsubscribe');
-          break;
-        
-        case 'campaign':
-          await handleCampaignEvent(req.body, null);
-          break;
-        
-        case 'send':
-          await handleEmailSend(req.body, null);
-          break;
-        
-        case 'open':
-          await handleEmailOpen(req.body, null);
-          break;
-        
-        default:
-          console.log('Unhandled Mailchimp webhook type:', req.body.type);
-          addBreadcrumb('Unhandled Mailchimp webhook type', 'webhook.mailchimp', { 
-            type: req.body.type 
-          }, 'warning');
+      try {
+        switch (req.body.type) {
+          case 'subscribe':
+            await handleSubscriberEvent(req.body, null, 'subscribe');
+            break;
+          
+          case 'unsubscribe':
+            await handleSubscriberEvent(req.body, null, 'unsubscribe');
+            break;
+          
+          case 'campaign':
+            console.log('campaign', req);
+            await handleCampaignEvent(req.body, null);
+            break;
+          
+          case 'send':
+            await handleEmailSend(req.body, null);
+            break;
+          
+          case 'open':
+            await handleEmailOpen(req.body, null);
+            break;
+          
+          default:
+            console.log('Unhandled Mailchimp webhook type:', req.body.type);
+            addBreadcrumb('Unhandled Mailchimp webhook type', 'webhook.mailchimp', { 
+              type: req.body.type 
+            }, 'warning');
+        }
+      } finally {
+        if (mailchimpSpan) {
+          mailchimpSpan.end();
+        }
       }
     } else {
-      console.log('Unknown webhook format:', req.body);
-      addBreadcrumb('Unknown webhook format', 'webhook', { 
+      console.log('No Type Given in webhook:', req.body);
+      addBreadcrumb('No Type Given in webhook', 'webhook', { 
         body: JSON.stringify(req.body).substring(0, 200) + '...' 
       }, 'warning');
     }
     
-    // Finish the transaction
-    if (transaction) {
-      transaction.finish();
+    // Finish the span
+    if (span) {
+      span.end();
     }
   } catch (error) {
     console.error('Error processing webhook:', error);
@@ -203,9 +274,10 @@ async function processWebhook(req, res, transaction) {
       'ED4245' // Red color for errors
     );
     
-    // Finish the transaction with error status
-    if (transaction) {
-      transaction.finish();
+    // Finish the span with error status
+    if (span) {
+      span.setStatus({ code: Sentry.SpanStatusType.ERROR });
+      span.end();
     }
   }
 }

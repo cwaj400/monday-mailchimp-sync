@@ -79,16 +79,23 @@ function setUser(user) {
   Sentry.setUser(user);
 }
 
-// Start a new transaction
-function startTransaction(name, op) {
+// Start a new span (replaces startTransaction)
+// In Sentry v9.x, startSpanManual doesn't take a callback
+function startSpanManual(options) {
   if (!process.env.SENTRY_DSN) {
     return null;
   }
 
-  return Sentry.startTransaction({
-    name,
-    op
-  });
+  // Create the span options
+  const spanOptions = {
+    name: options.name,
+    op: options.op,
+    attributes: options.attributes || {},
+    forceTransaction: options.forceTransaction || false
+  };
+
+  // Return the span - caller must manually end it with span.end()
+  return Sentry.startInactiveSpan(spanOptions);
 }
 
 module.exports = {
@@ -97,6 +104,6 @@ module.exports = {
   captureException,
   addBreadcrumb,
   setUser,
-  startTransaction,
+  startSpanManual,
   Sentry
 }; 
