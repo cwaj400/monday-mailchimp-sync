@@ -459,6 +459,341 @@ async function getAllMondayContacts(maxItems = 0) {
   }
 }
 
+/**
+ * Get detailed information about a Monday.com item
+ * @param {string|number} itemId - The Monday.com item ID
+ * @returns {Promise<Object|null>} - Item details or null if not found
+ */
+async function getMondayItemDetails(itemId) {
+  try {
+    const query = `
+      query {
+        items(ids: [${itemId}]) {
+          id
+          name
+          column_values {
+            id
+            text
+            value
+            type
+          }
+        }
+      }
+    `;
+    
+    const result = await executeQuery(query);
+    
+    if (result.data && result.data.items && result.data.items.length > 0) {
+      const item = result.data.items[0];
+      
+      // Add title field to column_values for compatibility
+      if (item.column_values) {
+        item.column_values = item.column_values.map(col => ({
+          ...col,
+          title: getColumnTitle(col.id, col.type)
+        }));
+      }
+      
+      return item;
+    }
+    
+    console.warn(`No item found with ID: ${itemId}`);
+    return null;
+  } catch (error) {
+    console.error('Error getting Monday.com item details:', error);
+    return null;
+  }
+}
+
+/**
+ * Get column title from column ID and type
+ * @param {string} columnId - Column ID
+ * @param {string} columnType - Column type
+ * @returns {string} - Column title
+ */
+function getColumnTitle(columnId, columnType) {
+  // Common column ID to title mappings
+  const columnMappings = {
+    // Email columns
+    'lead_email': 'Email',
+    'email_mknrc1cr': 'Email',
+    'email_1__1': 'Email 2',
+    'email': 'Email',
+    'contact_email': 'Email',
+    
+    // Name columns
+    'text3__1': 'First Name',
+    'text2__1': 'Last Name',
+    'text_1__1': 'Partner First',
+    'text_11__1': 'Partner Last',
+    'text': 'First Name',
+    'text1': 'Last Name',
+    
+    // Contact columns
+    'lead_phone': 'Phone',
+    'phone': 'Phone',
+    'phone1': 'Phone',
+    'phone2': 'Mobile',
+    
+    // Status and dropdown columns
+    'lead_status': 'Status',
+    'lead_owner': 'Owner',
+    'dropdown1__1': 'Lead Source',
+    'dropdown__1': 'Event Type',
+    'dropdown8__1': 'Pricing Shared',
+    'dropdown3__1': 'Lead Type',
+    
+    // Date columns
+    'date__1': 'Berwick Contact Date',
+    'date0__1': 'Tentative Event Date',
+    'date3__1': 'Last Emailed On',
+    'date_1__1': 'Contacted On',
+    
+    // Other columns
+    'numbers0__1': 'How many people',
+    'numbers8__1': 'Touchpoints',
+    'long_text': 'Notes',
+    'text8__1': 'Text',
+    'text77__1': 'Dead Reason',
+    'timeline0__1': 'Date',
+    
+    // Legacy mappings
+    'text2': 'Company',
+    'text3': 'Website',
+    'text4': 'Address',
+    'text5': 'Notes',
+    'status': 'Status',
+    'status1': 'Lead Status',
+    'status2': 'Deal Status',
+    'person': 'Owner',
+    'person1': 'Assigned To',
+    'person2': 'Contact Person',
+    'numeric': 'Amount',
+    'numeric1': 'Value',
+    'numeric2': 'Budget',
+    'numeric_mknr1kvd': 'Touchpoints'
+  };
+  
+  // Try to get title from mappings
+  if (columnMappings[columnId]) {
+    return columnMappings[columnId];
+  }
+  
+  // Fallback to column type
+  return columnType || 'Unknown';
+}
+
+/**
+ * Extract email from Monday.com item with comprehensive validation
+ * @param {Object} item - Monday.com item object
+ * @returns {string|null} - Email address or null if not found
+ */
+function extractEmailFromItem(item) {
+  if (!item || !item.column_values) {
+    return null;
+  }
+  
+  // Array of possible email column IDs and titles (in order of preference)
+  const emailColumns = [
+    'email_mknrc1cr', // Your current email column ID
+    'lead_email',
+    'email',
+    'contact_email',
+    'Email',
+    'email_address',
+    'customer_email',
+    'client_email'
+  ];
+  
+  // First try to find by column ID (exact match)
+  for (const columnId of emailColumns) {
+    const column = item.column_values.find(col => col.id === columnId);
+    if (column) {
+      const email = extractEmailFromColumn(column);
+      if (email) {
+        console.log(`Found email in column ID ${columnId}: ${email}`);
+        return email;
+      }
+    }
+  }
+  
+  // Then try to find by column title (partial match)
+  for (const columnTitle of emailColumns) {
+    const column = item.column_values.find(col => 
+      col.title && col.title.toLowerCase().includes('email')
+    );
+    if (column) {
+      const email = extractEmailFromColumn(column);
+      if (email) {
+        console.log(`Found email in column title "${column.title}": ${email}`);
+        return email;
+      }
+    }
+  }
+  
+  // Finally, scan all columns for any email-like content
+  for (const column of item.column_values) {
+    const email = extractEmailFromColumn(column);
+    if (email) {
+      console.log(`Found email in column "${column.title}" (ID: ${column.id}): ${email}`);
+      return email;
+    }
+  }
+  
+  console.warn(`No valid email found in item ${item.id} (${item.name})`);
+  return null;
+}
+
+/**
+ * Extract email from a single column with validation
+ * @param {Object} column - Monday.com column object
+ * @returns {string|null} - Email address or null if not valid
+ */
+function extractEmailFromColumn(column) {
+  if (!column) return null;
+  
+  let emailText = '';
+  
+  // Try different field types based on column type
+  switch (column.type) {
+    case 'email':
+      // Email column type - check text field
+      emailText = column.text || '';
+      break;
+      
+    case 'person':
+      // Person column type - check value field for email
+      if (column.value) {
+        try {
+          const parsedValue = JSON.parse(column.value);
+          emailText = parsedValue.email || parsedValue.text || '';
+        } catch (e) {
+          emailText = column.value;
+        }
+      }
+      break;
+      
+    case 'text':
+    case 'text_with_label':
+      // Text column type - check text field
+      emailText = column.text || '';
+      break;
+      
+    default:
+      // Try both text and value fields
+      emailText = column.text || '';
+      if (!emailText && column.value) {
+        try {
+          const parsedValue = JSON.parse(column.value);
+          emailText = parsedValue.email || parsedValue.text || '';
+        } catch (e) {
+          emailText = column.value;
+        }
+      }
+  }
+  
+  // Clean and validate the email
+  return validateAndCleanEmail(emailText);
+}
+
+/**
+ * Validate and clean email address
+ * @param {string} email - Raw email address
+ * @returns {string|null} - Cleaned email or null if invalid
+ */
+function validateAndCleanEmail(email) {
+  if (!email || typeof email !== 'string') {
+    return null;
+  }
+  
+  // Remove whitespace and convert to lowercase
+  const cleanEmail = email.trim().toLowerCase();
+  
+  // Basic email validation regex
+  const emailRegex = /^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$/;
+  
+  if (!emailRegex.test(cleanEmail)) {
+    return null;
+  }
+  
+  // Check for common invalid patterns
+  const invalidPatterns = [
+    /^test@/i,
+    /@example\./i,
+    /@localhost/i,
+    /@test\./i,
+    /^admin@/i,
+    /^noreply@/i,
+    /^no-reply@/i,
+    /^info@/i,
+    /^contact@/i,
+    /^hello@/i,
+    /^hi@/i
+  ];
+  
+  for (const pattern of invalidPatterns) {
+    if (pattern.test(cleanEmail)) {
+      console.warn(`Skipping email with invalid pattern: ${cleanEmail}`);
+      return null;
+    }
+  }
+  
+  return cleanEmail;
+}
+
+/**
+ * Process Monday.com webhook for item creation
+ * @param {Object} webhookData - Monday.com webhook data
+ * @returns {Promise<Object>} - Result of processing
+ */
+async function processMondayWebhook(webhookData) {
+  try {
+    const { type, event, boardId, itemId } = webhookData;
+    
+    console.log('Processing Monday.com webhook:', { type, eventType: event?.type, boardId, itemId });
+    
+    // Only process item creation events
+    if (event?.type !== 'create_item') {
+      console.log('Skipping non-item-creation event:', event?.type);
+      return { success: false, reason: 'Not an item creation event' };
+    }
+    
+    // Get the newly created item details
+    const itemDetails = await getMondayItemDetails(itemId);
+    
+    if (!itemDetails) {
+      console.error('Could not retrieve item details for:', itemId);
+      return { success: false, reason: 'Item not found' };
+    }
+    
+    // Extract email from the item
+    const email = extractEmailFromItem(itemDetails);
+    
+    if (!email) {
+      console.log('No valid email found in item:', itemId);
+      return { success: false, reason: 'No valid email found' };
+    }
+    
+    // Enroll in Mailchimp campaign
+    const { enrollInMailchimpCampaign } = require('./mailchimpEnrollmentService');
+    const enrollmentResult = await enrollInMailchimpCampaign(email, itemDetails);
+    
+    return {
+      success: enrollmentResult.success,
+      email,
+      itemId,
+      enrollmentResult
+    };
+    
+  } catch (error) {
+    console.error('Error processing Monday.com webhook:', error);
+    return {
+      success: false,
+      error: error.message
+    };
+  }
+}
+
 module.exports = {
   incrementTouchpoints,
   getMondayItem,
@@ -471,5 +806,6 @@ module.exports = {
   emailCache,
   checkEmailCache,
   getEmailFromCache,
-  setEmailInCache
+  setEmailInCache,
+  processMondayWebhook
 };

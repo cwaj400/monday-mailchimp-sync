@@ -1,5 +1,6 @@
 const express = require('express');
 const router = express.Router();
+const crypto = require('crypto');
 const { sendDiscordNotification } = require('../utils/discordNotifier');
 const { handleSubscriberEvent } = require('./webhookHandlers/handleSubscriberEvent.js');
 const { handleCampaignEvent } = require('./webhookHandlers/handleCampaignEvent.js');
@@ -7,6 +8,7 @@ const { handleEmailSend } = require('./webhookHandlers/handleEmailSend.js');
 const { handleEmailOpen } = require('./webhookHandlers/handleEmailOpen.js');
 const { handleEmailClick } = require('./webhookHandlers/handleEmailClick.js');
 const { captureException, addBreadcrumb, startSpanManual, Sentry } = require('../utils/sentry');
+const { processMondayWebhook } = require('../utils/mondayService');
 
 const dotenv = require('dotenv');
 dotenv.config();
@@ -82,6 +84,83 @@ router.post('/mailchimp', async (req, res) => {
     });
     
     // Make sure to end the span in case of error
+    if (span) {
+      span.setStatus({ code: Sentry.SpanStatusType.ERROR });
+      span.end();
+    }
+  }
+});
+
+// Monday.com webhook endpoint
+router.post('/monday', async (req, res) => {
+  let span = null;
+  
+  try {
+    // Handle webhook verification challenge
+    if (req.body.challenge) {
+      console.log('🔐 Monday.com webhook verification challenge received');
+      console.log('Challenge token:', req.body.challenge);
+      
+      // Return the challenge token as required by Monday.com
+      return res.status(200).json({ challenge: req.body.challenge });
+    }
+
+    // Verify webhook signature (only if not a verification challenge)
+    const signature = req.headers['x-monday-signature'];
+    if (signature && process.env.MONDAY_WEBHOOK_SECRET) {
+      const body = JSON.stringify(req.body);
+      const expectedSignature = crypto
+        .createHmac('sha256', process.env.MONDAY_WEBHOOK_SECRET)
+        .update(body)
+        .digest('base64');
+
+      if (signature !== expectedSignature) {
+        console.error('Invalid Monday.com webhook signature');
+        return res.status(403).json({ error: 'Invalid signature' });
+      }
+    }
+
+    // Start a Sentry span for performance monitoring
+    span = startSpanManual({
+      name: 'monday_webhook',
+      op: 'webhook.receive',
+      forceTransaction: true
+    });
+    
+    // Add breadcrumb for webhook received
+    addBreadcrumb(
+      'Monday.com webhook received',
+      'webhook',
+      {
+        type: req.body.type || 'unknown',
+        eventType: req.body.event?.type || 'unknown',
+        itemId: req.body.itemId || 'unknown'
+      }
+    );
+    
+    // Immediately acknowledge receipt
+    res.status(200).json({ success: true, message: 'Monday.com webhook received, processing in background' });
+
+    // Process the webhook asynchronously
+    processMondayWebhookAsync(req, res, span).catch(error => {
+      console.error('Error in background Monday.com processing:', error);
+      captureException(error, {
+        context: 'Background Monday.com webhook processing',
+        webhookType: req.body.type || 'unknown'
+      });
+      
+      if (span) {
+        span.setStatus({ code: Sentry.SpanStatusType.ERROR });
+        span.end();
+      }
+    });
+  } catch (error) {
+    console.error('Error in Monday.com webhook endpoint:', error);
+    captureException(error, {
+      context: 'Monday.com webhook endpoint',
+      body: req.body
+    });
+    
     if (span) {
       span.setStatus({ code: Sentry.SpanStatusType.ERROR });
       span.end();
@@ -275,6 +354,71 @@ async function processWebhook(req, res, span) {
     );
     
     // Finish the span with error status
+    if (span) {
+      span.setStatus({ code: Sentry.SpanStatusType.ERROR });
+      span.end();
+    }
+  }
+}
+
+// Process Monday.com webhooks asynchronously
+async function processMondayWebhookAsync(req, res, span) {
+  try {
+    const result = await processMondayWebhook(req.body);
+    
+    if (result.success) {
+      console.log(`✅ Successfully processed Monday.com webhook for item ${result.itemId}`);
+      
+      // Send success notification
+      await sendDiscordNotification(
+        '🎯 Monday.com Inquiry Processed',
+        `Successfully processed new inquiry from Monday.com.`,
+        {
+          'Email': result.email,
+          'Monday Item ID': result.itemId,
+          'Enrollment Status': result.enrollmentResult.success ? 'Success' : 'Failed',
+          'Processing Time': `${result.enrollmentResult.processingTime || 0}ms`,
+          'Timestamp': new Date().toISOString()
+        },
+        result.enrollmentResult.success ? '57F287' : 'ED4245'
+      );
+    } else {
+      console.log(`⚠️ Monday.com webhook processing skipped: ${result.reason}`);
+      
+      // Send notification for skipped processing
+      await sendDiscordNotification(
+        '⚠️ Monday.com Inquiry Skipped',
+        `Monday.com webhook was received but processing was skipped.`,
+        {
+          'Reason': result.reason,
+          'Monday Item ID': req.body.itemId || 'Unknown',
+          'Event Type': req.body.event?.type || 'Unknown',
+          'Timestamp': new Date().toISOString()
+        },
+        'FFA500' // Orange color for warnings
+      );
+    }
+    
+    if (span) span.end();
+  } catch (error) {
+    console.error('Error processing Monday.com webhook:', error);
+    captureException(error, {
+      context: 'Monday.com webhook processing'
+    });
+    
+    // Send error notification
+    await sendDiscordNotification(
+      '❌ Monday.com Webhook Error',
+      `An error occurred while processing a Monday.com webhook.`,
+      {
+        'Error': error.message,
+        'Monday Item ID': req.body.itemId || 'Unknown',
+        'Event Type': req.body.event?.type || 'Unknown',
+        'Timestamp': new Date().toISOString()
+      },
+      'ED4245' // Red color for errors
+    );
+    
     if (span) {
       span.setStatus({ code: Sentry.SpanStatusType.ERROR });
       span.end();
