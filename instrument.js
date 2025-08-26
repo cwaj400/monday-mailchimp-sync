@@ -3,8 +3,6 @@ const dotenv = require('dotenv');
 
 dotenv.config();
 
-// Temporarily disable Sentry to debug function invocation failure
-/*
 if (process.env.SENTRY_DSN) {
   Sentry.init({
     dsn: process.env.SENTRY_DSN,
@@ -16,6 +14,3 @@ if (process.env.SENTRY_DSN) {
 } else {
   console.warn('⚠️ SENTRY_DSN not found - Sentry will not be initialized');
 }
-*/
-
-console.log('Sentry temporarily disabled for debugging');

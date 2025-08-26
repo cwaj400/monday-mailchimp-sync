@@ -44,17 +44,26 @@ app.get("/debug-sentry", function mainHandler(req, res) {
 
 
 app.get('/sentry-diagnostics', (req, res) => {
-  const hub = Sentry.getCurrentHub();
-  const client = hub.getClient();
-  const options = client ? client.getOptions?.() : {};
+  try {
+    const hub = Sentry.getCurrentHub();
+    const client = hub.getClient();
+    const options = client ? client.getOptions?.() : {};
 
-  res.json({
-    initialized: !!client,
-    dsnPresent: !!process.env.SENTRY_DSN,
-    dsnFromClient: options?.dsn || null,
-    environment: options?.environment || process.env.NODE_ENV,
-    release: options?.release || null,
-  });
+    res.json({
+      initialized: !!client,
+      dsnPresent: !!process.env.SENTRY_DSN,
+      dsnFromClient: options?.dsn || null,
+      environment: options?.environment || process.env.NODE_ENV,
+      release: options?.release || null,
+    });
+  } catch (error) {
+    res.json({
+      initialized: false,
+      dsnPresent: !!process.env.SENTRY_DSN,
+      error: error.message,
+      environment: process.env.NODE_ENV,
+    });
+  }
 });
 
 
