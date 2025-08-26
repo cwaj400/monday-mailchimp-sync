@@ -1,6 +1,6 @@
 const { findMondayItemByEmail, incrementTouchpoints, addNoteToMondayItem } = require('../../utils/mondayService');
 const { sendDiscordNotification } = require('../../utils/discordNotifier');
-const { addBreadcrumb, startSpanManual, Sentry } = require('../../utils/sentry');
+const { addBreadcrumb, startSpan, Sentry } = require('../../utils/sentry');
 const dotenv = require('dotenv');
 
 dotenv.config();
@@ -11,10 +11,14 @@ exports.processEmailEvent = async function(email, eventType, eventData) {
     
     try {
       // Start Sentry span for performance monitoring
-      span = startSpanManual({
+      span = startSpan({
         name: 'process_email_event',
         op: 'webhook.email.process',
-        forceTransaction: true
+        attributes: {
+          email,
+          eventType,
+          campaignTitle: eventData.campaignTitle
+        }
       });
       
       console.log('processEmailEvent');

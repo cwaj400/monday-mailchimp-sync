@@ -7,7 +7,7 @@ const { handleCampaignEvent } = require('./webhookHandlers/handleCampaignEvent.j
 const { handleEmailSend } = require('./webhookHandlers/handleEmailSend.js');
 const { handleEmailOpen } = require('./webhookHandlers/handleEmailOpen.js');
 const { handleEmailClick } = require('./webhookHandlers/handleEmailClick.js');
-const { addBreadcrumb, startSpanManual, Sentry } = require('../utils/sentry');
+const { addBreadcrumb, startSpan, Sentry } = require('../utils/sentry');
 const { processMondayWebhook } = require('../utils/mondayService');
 
 const dotenv = require('dotenv');
@@ -59,10 +59,15 @@ router.post('/mailchimp', async (req, res) => {
     }
     
     // Start a Sentry span for performance monitoring (no callback in v9.x)
-    span = startSpanManual({
+    span = startSpan({
       name: 'mailchimp_webhook',
       op: 'webhook.receive',
-      forceTransaction: true
+      attributes: {
+        type: req.body.type || 'unknown',
+        hasMandrill: !!req.body.mandrill_events,
+        bodyKeys: Object.keys(req.body),
+        headers: Object.keys(req.headers).filter(h => h.toLowerCase().includes('mailchimp') || h.toLowerCase().includes('webhook'))
+      }
     });
     
     // Add breadcrumb for webhook received
@@ -196,10 +201,14 @@ router.post('/monday', async (req, res) => {
     }
 
     // Start a Sentry span for performance monitoring
-    span = startSpanManual({
+    span = startSpan({
       name: `monday_webhook_${req.body.event?.type || 'unknown'}_${req.body.event?.pulseId || 'no_id'}`,
       op: 'webhook.receive',
-      forceTransaction: true
+      attributes: {
+        type: req.body.type || 'unknown',
+        eventType: req.body.event?.type || 'unknown',
+        itemId: req.body.itemId || 'unknown'
+      }
     });
     
     // Add breadcrumb for webhook received

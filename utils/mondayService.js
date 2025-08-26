@@ -1,6 +1,6 @@
 const { executeQuery } = require('./mondayClient');
 const dotenv = require('dotenv');
-const Sentry = require('@sentry/node');
+const { startSpan, Sentry } = require('./sentry');
 
 dotenv.config();
 
@@ -810,15 +810,16 @@ function validateAndCleanEmail(email) {
  * @returns {Promise<Object>} - Result of processing
  */
 async function processMondayWebhook(webhookData) {
+  // Monday.com webhook structure: { event: { type, pulseId, boardId, ... } }
+  const event = webhookData.event;
+  
   // Create a Sentry span for the entire webhook processing
-  const span = Sentry.startInactiveSpan({
+  const span = startSpan({
     name: `monday_webhook_${event?.type || 'unknown'}_${event?.pulseId || 'no_id'}`,
     op: 'webhook.monday.process',
   });
 
   try {
-    // Monday.com webhook structure: { event: { type, pulseId, boardId, ... } }
-    const event = webhookData.event;
     
     // Add breadcrumb for webhook received
     Sentry.addBreadcrumb({
@@ -915,7 +916,7 @@ async function processMondayWebhook(webhookData) {
     });
     
     // Extract email from the item
-    const emailSpan = Sentry.startInactiveSpan({
+    const emailSpan = startSpan({
       name: `extract_email_item_${actualItemId}`,
       op: 'email.extraction',
     });
@@ -958,7 +959,7 @@ async function processMondayWebhook(webhookData) {
     });
     
     // Enroll in Mailchimp campaign
-    const enrollmentSpan = Sentry.startInactiveSpan({
+    const enrollmentSpan = startSpan({
       name: `mailchimp_enrollment_${email}`,
       op: 'mailchimp.enrollment',
     });

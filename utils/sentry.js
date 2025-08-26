@@ -3,9 +3,7 @@ const Sentry = require('@sentry/node');
 // Helper functions only - no initialization
 function captureException(error, context = {}) {
   Sentry.withScope(scope => {
-    for (const key in context) {
-      scope.setExtra(key, context[key]);
-    }
+    Object.entries(context).forEach(([k, v]) => scope.setExtra(k, v));
     Sentry.captureException(error);
   });
 }
@@ -19,13 +17,13 @@ function addBreadcrumb(message, category, data = {}, level = 'info') {
   });
 }
 
-function startSpanManual(options) {
+function startSpan(options) {
   return Sentry.startInactiveSpan(options);
 }
 
 module.exports = {
   captureException,
   addBreadcrumb,
-  startSpanManual,
+  startSpan,
   Sentry
 };

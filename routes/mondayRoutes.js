@@ -2,7 +2,7 @@ const express = require('express');
 const router = express.Router();
 const { executeQuery } = require('../utils/mondayClient');
 const { findMondayItemByEmail, getXMondayContacts, getAllMondayContacts } = require('../utils/mondayService');
-const { addBreadcrumb, startSpanManual, Sentry } = require('../utils/sentry');
+const { addBreadcrumb, startSpan } = require('../utils/sentry');
 
 router.get('/', (req, res) => {
   res.json({
@@ -18,10 +18,10 @@ router.get('/find-by-email', async (req, res) => {
     Sentry.captureMessage('TEST: Monday.com find-by-email endpoint called', 'info');
     
     // Start Sentry span for performance monitoring
-    span = startSpanManual({
+    span = startSpan({
       name: 'monday_find_by_email',
       op: 'api.monday.find',
-      forceTransaction: true
+      attributes: { email: req.query.email }
     });
     
     const email = req.query.email;
@@ -91,10 +91,10 @@ router.get('/all-x-contacts', async (req, res) => {
   
   try {
     // Start Sentry span for performance monitoring
-    span = startSpanManual({
+    span = startSpan({
       name: 'monday_get_contacts',
       op: 'api.monday.contacts',
-      forceTransaction: true
+      attributes: { quantity: req.query.quantity }
     });
     
     const x = req.query.quantity;

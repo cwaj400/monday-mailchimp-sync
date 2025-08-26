@@ -1,10 +1,9 @@
 require('./instrument.js');
 
 const express = require('express');
-const bodyParser = require('body-parser');
 const cors = require('cors');
+const Sentry = require('@sentry/node');
 const { apiKeyAuth } = require('./utils/authMiddleware');
-const { Sentry, setupExpressErrorHandler } = require('./utils/sentry');
 
 // Routes
 const webhookRoutes = require('./routes/webhookRoutes');
@@ -15,19 +14,11 @@ const homeRoute = require('./routes/homeRoute');
 const healthRoute = require('./routes/healthRoute');
 
 const app = express();
-app.use(Sentry.Handlers.requestHandler());
-app.use(Sentry.Handlers.tracingHandler());
 
 // Middleware
-app.use(cors());
-app.use(bodyParser.json());
-app.use(bodyParser.urlencoded({ extended: true }));
-
-// Routes
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
-
-//validateEnv();
+app.use(cors());
 
 // Routes
 app.use('/api/webhooks', webhookRoutes);
@@ -37,7 +28,7 @@ app.use('/api/status', statusRoutes);
 app.use('/', homeRoute);
 app.use('/health', healthRoute);
 
-app.get('test', (req, res) => {
+app.get('/test', (req, res) => {
   res.json({ message: 'Hello World' });
 });
 
@@ -50,8 +41,6 @@ app.get("/debug-sentry", function mainHandler(req, res) {
     res.status(500).json({ error: 'Error captured with span and sent to Sentry', message: "Check sentry" });
   }
 });
-
-
 
 // Test with the new span-based API
 app.get("/debug-sentry/span", function(req, res) {
@@ -101,8 +90,7 @@ app.get("/debug-sentry/performance", async function(req, res) {
     // Create a parent span
     const parentSpan = Sentry.startInactiveSpan({
       name: "test-performance",
-      op: "test",
-      forceTransaction: true
+      op: "test"
     });
     
     // Create a child span
@@ -139,8 +127,8 @@ app.get("/debug-sentry/performance", async function(req, res) {
   }
 });
 
-// Set up Sentry error handler
-app.use(Sentry.Handlers.errorHandler());
+// IMPORTANT: add the Sentry error handler AFTER routes, BEFORE your own handler
+Sentry.setupExpressErrorHandler(app);
 
 // Optional fallthrough error handler
 app.use(function onError(err, req, res, next) {
