@@ -812,7 +812,7 @@ function validateAndCleanEmail(email) {
 async function processMondayWebhook(webhookData) {
   // Create a Sentry span for the entire webhook processing
   const span = Sentry.startInactiveSpan({
-    name: 'process_monday_webhook',
+    name: `monday_webhook_${event?.type || 'unknown'}_${event?.pulseId || 'no_id'}`,
     op: 'webhook.monday.process',
   });
 
@@ -915,7 +915,19 @@ async function processMondayWebhook(webhookData) {
     });
     
     // Extract email from the item
+    const emailSpan = Sentry.startInactiveSpan({
+      name: `extract_email_item_${actualItemId}`,
+      op: 'email.extraction',
+    });
+    
     const email = extractEmailFromItem(itemDetails);
+    
+    if (emailSpan) {
+      emailSpan.setStatus({ 
+        code: email ? Sentry.SpanStatusType.OK : Sentry.SpanStatusType.ERROR 
+      });
+      emailSpan.end();
+    }
     
     if (!email) {
       console.log('No valid email found in item:', actualItemId);
@@ -946,8 +958,20 @@ async function processMondayWebhook(webhookData) {
     });
     
     // Enroll in Mailchimp campaign
+    const enrollmentSpan = Sentry.startInactiveSpan({
+      name: `mailchimp_enrollment_${email}`,
+      op: 'mailchimp.enrollment',
+    });
+    
     const { enrollInMailchimpCampaign } = require('./mailchimpEnrollmentService');
     const enrollmentResult = await enrollInMailchimpCampaign(email, itemDetails);
+    
+    if (enrollmentSpan) {
+      enrollmentSpan.setStatus({ 
+        code: enrollmentResult.success ? Sentry.SpanStatusType.OK : Sentry.SpanStatusType.ERROR 
+      });
+      enrollmentSpan.end();
+    }
     
     // Add breadcrumb for enrollment result
     Sentry.addBreadcrumb({
