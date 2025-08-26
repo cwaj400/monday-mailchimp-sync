@@ -14,6 +14,9 @@ router.get('/find-by-email', async (req, res) => {
   let span = null;
   
   try {
+    // Force a test Sentry event to verify it's working
+    Sentry.captureMessage('TEST: Monday.com find-by-email endpoint called', 'info');
+    
     // Start Sentry span for performance monitoring
     span = startSpanManual({
       name: 'monday_find_by_email',
