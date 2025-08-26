@@ -235,6 +235,7 @@ Check Mailchimp webhook configuration.
 ### Security Scanning
 - Snyk integration for vulnerability scanning
 - Pre-commit hooks for security checks
+- **Note**: Vercel dependency vulnerabilities (like undici) are known issues that will be fixed in future Vercel updates
 
 ## 🚢 Deployment
 
@@ -324,4 +325,7 @@ A: Use Sentry dashboard, Vercel logs, and Discord notifications.
 A: Errors are logged to Sentry, notifications sent to Discord, and proper HTTP error responses are returned.
 
 **Q: How do I prevent webhook timeouts?**
-A: Webhooks are acknowledged immediately, then processed asynchronously to prevent timeouts. 
+A: Webhooks are acknowledged immediately, then processed asynchronously to prevent timeouts.
+
+**Q: What about Snyk security vulnerabilities in Vercel dependencies?**
+A: Vercel dependency vulnerabilities (like undici) are known issues that will be fixed in future Vercel updates. These don't affect your application's security. 
