@@ -480,7 +480,7 @@ async function getMondayItemDetails(itemId) {
   try {
     const query = `
       query {
-        items(ids: [${itemId}]) {
+        items(ids: ["${itemId}"], board_id: ${process.env.MONDAY_BOARD_ID || 'null'}) {
           id
           name
           column_values {
@@ -499,15 +499,43 @@ async function getMondayItemDetails(itemId) {
       function: 'getMondayItemDetails'
     });
     
-    const result = await executeQuery(query);
+    let result = await executeQuery(query);
     
     logger.info('Query result received', {
       hasData: !!result?.data,
       hasItems: !!result?.data?.items,
       itemCount: result?.data?.items?.length || 0,
       itemId: itemId,
+      boardId: process.env.MONDAY_BOARD_ID,
       function: 'getMondayItemDetails'
     });
+    
+    // If no items found, try without board_id
+    if (!result?.data?.items || result.data.items.length === 0) {
+      logger.info('No items found with board_id, trying without board_id');
+      const fallbackQuery = `
+        query {
+          items(ids: ["${itemId}"]) {
+            id
+            name
+            column_values {
+              id
+              text
+              value
+              type
+            }
+          }
+        }
+      `;
+      result = await executeQuery(fallbackQuery);
+      logger.info('Fallback query result', {
+        hasData: !!result?.data,
+        hasItems: !!result?.data?.items,
+        itemCount: result?.data?.items?.length || 0,
+        itemId: itemId,
+        function: 'getMondayItemDetails'
+      });
+    }
     
     if (result.data && result.data.items && result.data.items.length > 0) {
       logger.info('Executed query successfully', {
@@ -986,9 +1014,7 @@ async function processMondayWebhook(webhookData) {
     const email = extractEmailFromItem(itemDetails);
     
     if (emailSpan) {
-      emailSpan.setStatus({ 
-        code: email ? Sentry.SpanStatusType.OK : Sentry.SpanStatusType.ERROR 
-      });
+      emailSpan.setStatus(email ? 'ok' : 'error');
       emailSpan.end();
     }
     
@@ -1035,9 +1061,7 @@ async function processMondayWebhook(webhookData) {
     const enrollmentResult = await enrollInMailchimpCampaign(email, itemDetails);
     
     if (enrollmentSpan) {
-      enrollmentSpan.setStatus({ 
-        code: enrollmentResult.success ? Sentry.SpanStatusType.OK : Sentry.SpanStatusType.ERROR 
-      });
+      enrollmentSpan.setStatus(enrollmentResult.success ? 'ok' : 'error');
       enrollmentSpan.end();
     }
     
@@ -1056,9 +1080,7 @@ async function processMondayWebhook(webhookData) {
     
     // Set span status based on result
     if (span) {
-      span.setStatus({ 
-        code: enrollmentResult.success ? Sentry.SpanStatusType.OK : Sentry.SpanStatusType.ERROR 
-      });
+      span.setStatus(enrollmentResult.success ? 'ok' : 'error');
     }
     
     return {
@@ -1085,7 +1107,7 @@ async function processMondayWebhook(webhookData) {
     
     // Set span status to error
     if (span) {
-      span.setStatus({ code: Sentry.SpanStatusType.ERROR });
+      span.setStatus('error');
     }
     
     return {

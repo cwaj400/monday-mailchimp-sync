@@ -38,13 +38,14 @@ async function sendDiscordNotification(title, message, fields = {}, color = '344
     }));
     logger.info('Fields:', embedFields);
 
-    // Create the payload
+    // Create the payload (simplified to avoid socket hang up)
     const payload = {
+      content: `**${title}**\n${message}`,
       embeds: [{
         title: title,
         description: message,
         color: parseInt(color, 16), // Convert hex to decimal
-        fields: embedFields,
+        fields: embedFields.slice(0, 3), // Limit to 3 fields to reduce payload size
         timestamp: new Date().toISOString()
       }]
     };
@@ -92,15 +93,13 @@ async function sendDiscordNotification(title, message, fields = {}, color = '344
     console.error('Error sending Discord notification:', error.message);
     logger.error('Error sending Discord notification:', {
       error: error.message,
-      response: error.response?.data
+      code: error.code,
+      response: error.response?.data,
+      status: error.response?.status,
+      socketHangUp: error.code === 'ECONNRESET' || error.message.includes('socket hang up')
     });
-    Sentry.captureException(error, {
-      context: 'Failed to send Discord notification',
-      title: title,
-      message: message,
-      fields: fields,
-      color: color
-    });
+    
+    // Don't capture Discord errors in Sentry (they're not critical)
     if (error.response) {
       console.error('Discord API response:', error.response.data);
       logger.error('Discord API response:', {
