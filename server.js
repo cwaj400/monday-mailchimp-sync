@@ -66,7 +66,7 @@ app.get("/debug-sentry/span", function(req, res) {
     });
     
     // Create a span
-    const span = Sentry.startSpanManual({
+    const span = Sentry.startInactiveSpan({
       name: "test-span",
       op: "test",
       attributes: {
@@ -98,13 +98,13 @@ app.get("/debug-sentry/span", function(req, res) {
 app.get("/debug-sentry/performance", async function(req, res) {
   try {
     // Create a parent span
-    const parentSpan = Sentry.startSpanManual({
+    const parentSpan = Sentry.startInactiveSpan({
       name: "test-performance",
       op: "test"
     });
     
     // Create a child span
-    const childSpan1 = Sentry.startSpanManual({
+    const childSpan1 = Sentry.startInactiveSpan({
       name: "test-operation-1",
       op: "test.operation"
     });
@@ -116,7 +116,7 @@ app.get("/debug-sentry/performance", async function(req, res) {
     childSpan1.end();
     
     // Create another child span
-    const childSpan2 = Sentry.startSpanManual({
+    const childSpan2 = Sentry.startInactiveSpan({
       name: "test-operation-2",
       op: "test.operation"
     });
