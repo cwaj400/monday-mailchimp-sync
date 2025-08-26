@@ -1,17 +1,9 @@
 const pino = require('pino');
 const Sentry = require('@sentry/node');
 
-// Create Pino logger
+// Create Pino logger (JSON format for production compatibility)
 const logger = pino({
   level: process.env.LOG_LEVEL || 'info',
-  transport: {
-    target: 'pino-pretty',
-    options: {
-      colorize: true,
-      translateTime: 'SYS:standard',
-      ignore: 'pid,hostname'
-    }
-  },
   base: {
     env: process.env.NODE_ENV,
     service: 'monday-mailchimp-sync'
