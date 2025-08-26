@@ -33,6 +33,7 @@ router.get('/find-by-email', async (req, res) => {
     });
     
     if (!email) {
+      if (span) span.end();
       return res.status(400).json({ error: 'Email parameter is required' });
     }
     
@@ -46,6 +47,7 @@ router.get('/find-by-email', async (req, res) => {
         itemName: item.name
       });
       
+      if (span) span.end();
       return res.json({
         success: true,
         item: {
@@ -58,7 +60,7 @@ router.get('/find-by-email', async (req, res) => {
       addBreadcrumb('Monday.com item not found', 'api.monday', {
         email
       });
-      
+      if (span) span.end();
       return res.status(404).json({
         success: false,
         message: `No item found with email: ${email}`
@@ -71,6 +73,7 @@ router.get('/find-by-email', async (req, res) => {
       email: req.query.email,
       endpoint: '/api/monday/find-by-email'
     });
+    if (span) span.end();
     
     return res.status(500).json({
       success: false,
@@ -110,6 +113,7 @@ router.get('/all-x-contacts', async (req, res) => {
       contactCount: contacts.length || 0
     });
     
+    if (span) span.end();
     res.json(contacts);
   } catch (error) {
     // Log error to Sentry
@@ -118,8 +122,8 @@ router.get('/all-x-contacts', async (req, res) => {
       quantity: req.query.quantity,
       endpoint: '/api/monday/all-x-contacts'
     });
-    
-    res.status(500).json({
+    if (span) span.end();
+    return res.status(500).json({
       success: false,
       error: error.message
     });
