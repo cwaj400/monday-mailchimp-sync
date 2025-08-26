@@ -2,7 +2,7 @@ const axios = require('axios');
 const dotenv = require('dotenv');
 const { sendDiscordNotification } = require('../../utils/discordNotifier');
 const { findMondayItemByEmail, incrementTouchpoints, addNoteToMondayItem } = require('../../utils/mondayService');
-const { captureException, addBreadcrumb, startSpanManual, Sentry } = require('../../utils/sentry');
+const { captureException, addBreadcrumb, startSpan, Sentry } = require('../../utils/sentry');
 dotenv.config();
 
 const MAILCHIMP_API_KEY = process.env.MAILCHIMP_API_KEY;
@@ -14,10 +14,14 @@ exports.handleCampaignEvent = async function(req, res) {
     
     try {
       // Start a Sentry span (no callback in v9.x)
-      span = startSpanManual({
+      span = startSpan({
         name: 'handleCampaignEvent',
         op: 'webhook.campaign',
-        forceTransaction: true
+        attributes: {
+          campaignId: req.data.id,
+          status: req.data.status,
+          subject: req.data.subject
+        }
       });
 
       let campaignId = null;
@@ -128,7 +132,7 @@ exports.handleCampaignEvent = async function(req, res) {
       );
       
       // Create a child span for recipients API request
-      const recipientsSpan = span ? Sentry.startInactiveSpan({
+      const recipientsSpan = span ? startSpan({
         name: 'fetch_campaign_recipients',
         op: 'http.client',
         attributes: { campaignId }
@@ -161,7 +165,7 @@ exports.handleCampaignEvent = async function(req, res) {
       );
       
       // Create a child span for processing recipients
-      const processingSpan = span ? Sentry.startInactiveSpan({
+      const processingSpan = span ? startSpan({
         name: 'process_recipients',
         op: 'task',
         attributes: { 

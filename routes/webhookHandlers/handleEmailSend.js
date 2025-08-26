@@ -1,7 +1,7 @@
 const { processEmailEvent } = require('./processEmailEvent');
 const dotenv = require('dotenv');
 const Sentry = require('@sentry/node');
-const { startSpanManual, addBreadcrumb } = require('../../utils/sentry');
+const { startSpan, addBreadcrumb } = require('../../utils/sentry');
 
 dotenv.config();
 
@@ -11,7 +11,7 @@ exports.handleEmailSend = async function(event, res) {
     const campaignId = event.msg.campaign_id || 'unknown';
     
     // Create a span for this operation
-    const span = startSpanManual({
+    const span = startSpan({
       name: 'handle_email_send',
       op: 'webhook.mandrill.send',
       attributes: {

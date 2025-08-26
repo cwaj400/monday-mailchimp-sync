@@ -4,6 +4,7 @@ const express = require('express');
 const cors = require('cors');
 const Sentry = require('@sentry/node');
 const { apiKeyAuth } = require('./utils/authMiddleware');
+const { startSpan } = require('./utils/sentry');
 
 // Routes
 const webhookRoutes = require('./routes/webhookRoutes');
@@ -56,7 +57,7 @@ app.get("/debug-sentry/span", function(req, res) {
     });
     
     // Create a span
-    const span = Sentry.startInactiveSpan({
+    const span = startSpan({
       name: "test-span",
       op: "test",
       attributes: {
@@ -88,13 +89,13 @@ app.get("/debug-sentry/span", function(req, res) {
 app.get("/debug-sentry/performance", async function(req, res) {
   try {
     // Create a parent span
-    const parentSpan = Sentry.startInactiveSpan({
+    const parentSpan = startSpan({
       name: "test-performance",
       op: "test"
     });
     
     // Create a child span
-    const childSpan1 = Sentry.startInactiveSpan({
+    const childSpan1 = startSpan({
       name: "test-operation-1",
       op: "test.operation"
     });
@@ -106,7 +107,7 @@ app.get("/debug-sentry/performance", async function(req, res) {
     childSpan1.end();
     
     // Create another child span
-    const childSpan2 = Sentry.startInactiveSpan({
+    const childSpan2 = startSpan({
       name: "test-operation-2",
       op: "test.operation"
     });

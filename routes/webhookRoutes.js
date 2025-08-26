@@ -283,7 +283,7 @@ async function processWebhook(req, res, span) {
     // Handle Mandrill events (transactional emails)
     if (req.body.mandrill_events) {
       // Create a child span for Mandrill processing
-      const mandrillSpan = span ? Sentry.startInactiveSpan({
+      const mandrillSpan = span ? startSpan({
         name: 'process_mandrill_events',
         op: 'webhook.mandrill',
       }) : null;
@@ -302,7 +302,7 @@ async function processWebhook(req, res, span) {
       );
 
       // Create a child span for JSON parsing
-      const parseSpan = mandrillSpan ? Sentry.startInactiveSpan({
+      const parseSpan = mandrillSpan ? startSpan({
         name: 'parse_mandrill_json',
         op: 'json.parse',
       }) : null;
@@ -323,7 +323,7 @@ async function processWebhook(req, res, span) {
         });
         
         // Create a child span for each event type
-        const eventSpan = mandrillSpan ? Sentry.startInactiveSpan({
+        const eventSpan = mandrillSpan ? startSpan({
           name: `process_mandrill_${event.event}`,
           op: `webhook.mandrill.${event.event}`,
           attributes: {
@@ -370,7 +370,7 @@ async function processWebhook(req, res, span) {
     // Handle regular Mailchimp campaign webhooks
     else if (req.body.type) {
       // Create a child span for Mailchimp processing
-      const mailchimpSpan = span ? Sentry.startInactiveSpan({
+      const mailchimpSpan = span ? startSpan({
         name: `process_mailchimp_${req.body.type}`,
         op: `webhook.mailchimp.${req.body.type}`,
         attributes: {

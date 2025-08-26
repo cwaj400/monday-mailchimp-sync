@@ -2,7 +2,7 @@ const express = require('express');
 const router = express.Router();
 const mailchimp = require('@mailchimp/mailchimp_marketing');
 const { executeQuery } = require('../utils/mondayClient');
-const { addBreadcrumb, startSpanManual, Sentry } = require('../utils/sentry');
+const { addBreadcrumb, startSpan, Sentry } = require('../utils/sentry');
 
 // Configure the Mailchimp client
 mailchimp.setConfig({
@@ -34,10 +34,12 @@ router.get('/mailchimp', async (req, res) => {
   
   try {
     // Start Sentry span for performance monitoring
-    span = startSpanManual({
+    span = startSpan({
       name: 'status_mailchimp_check',
       op: 'api.status.mailchimp',
-      forceTransaction: true
+      attributes: {
+        endpoint: '/api/status/mailchimp'
+      }
     });
     
     // Add breadcrumb for request
@@ -118,10 +120,12 @@ router.get('/monday', async (req, res) => {
   
   try {
     // Start Sentry span for performance monitoring
-    span = startSpanManual({
+    span = startSpan({
       name: 'status_monday_check',
       op: 'api.status.monday',
-      forceTransaction: true
+      attributes: {
+        endpoint: '/api/status/monday'
+      }
     });
     
     // Add breadcrumb for request
