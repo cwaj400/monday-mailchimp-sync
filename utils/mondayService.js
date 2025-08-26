@@ -748,9 +748,15 @@ function validateAndCleanEmail(email) {
  */
 async function processMondayWebhook(webhookData) {
   try {
-    const { type, event, boardId, itemId } = webhookData;
+    // Monday.com webhook structure: { event: { type, pulseId, boardId, ... } }
+    const event = webhookData.event;
     
-    console.log('Processing Monday.com webhook:', { type, eventType: event?.type, boardId, itemId });
+    console.log('Processing Monday.com webhook:', { 
+      eventType: event?.type, 
+      boardId: event?.boardId, 
+      pulseId: event?.pulseId,
+      webhookDataKeys: Object.keys(webhookData)
+    });
     
     // Only process item creation events (Monday.com uses 'create_pulse' for item creation)
     if (event?.type !== 'create_item' && event?.type !== 'create_pulse') {
@@ -759,7 +765,7 @@ async function processMondayWebhook(webhookData) {
     }
     
     // Extract item ID from the event (Monday.com uses pulseId for item ID)
-    const actualItemId = itemId || event?.pulseId;
+    const actualItemId = event?.pulseId;
     
     if (!actualItemId) {
       console.error('No item ID found in webhook data');
@@ -772,7 +778,7 @@ async function processMondayWebhook(webhookData) {
     const itemDetails = await getMondayItemDetails(actualItemId);
     
     if (!itemDetails) {
-      console.error('Could not retrieve item details for:', itemId);
+      console.error('Could not retrieve item details for:', actualItemId);
       return { success: false, reason: 'Item not found' };
     }
     
@@ -780,7 +786,7 @@ async function processMondayWebhook(webhookData) {
     const email = extractEmailFromItem(itemDetails);
     
     if (!email) {
-      console.log('No valid email found in item:', itemId);
+      console.log('No valid email found in item:', actualItemId);
       return { success: false, reason: 'No valid email found' };
     }
     
@@ -791,7 +797,7 @@ async function processMondayWebhook(webhookData) {
     return {
       success: enrollmentResult.success,
       email,
-      itemId,
+      itemId: actualItemId,
       enrollmentResult
     };
     
