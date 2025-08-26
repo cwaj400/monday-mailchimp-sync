@@ -98,7 +98,7 @@ router.post('/mailchimp', async (req, res) => {
       }
     }).finally(() => {
       // Ensure span is always ended, even if processWebhook doesn't handle it
-      if (span && !span.isFinished()) {
+      if (span) {
         span.end();
       }
     });
@@ -190,7 +190,7 @@ router.post('/monday', async (req, res) => {
       }
     }).finally(() => {
       // Ensure span is always ended, even if processMondayWebhookAsync doesn't handle it
-      if (span && !span.isFinished()) {
+      if (span) {
         span.end();
       }
     });
