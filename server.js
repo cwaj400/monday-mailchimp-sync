@@ -52,47 +52,37 @@ app.get('/sentry-diagnostics', (req, res) => {
   });
 });
 
-// Test with the new span-based API
-app.get("/debug-sentry/span", function(req, res) {
+app.get('/debug-sentry/performance', async (req, res) => {
   try {
-    // Add some breadcrumbs
-    Sentry.addBreadcrumb({
-      message: 'User accessed debug span route',
-      category: 'navigation',
-      data: { 
-        path: '/debug-sentry/span',
-        query: req.query
+    await Sentry.startSpan(
+      { name: 'test-performance', op: 'test' }, // parent
+      async () => {
+        await Sentry.startSpan(
+          { name: 'test-operation-1', op: 'test.operation' }, // child 1
+          async () => {
+            await new Promise(r => setTimeout(r, 500));
+          }
+        );
+
+        await Sentry.startSpan(
+          { name: 'test-operation-2', op: 'test.operation' }, // child 2
+          async () => {
+            await new Promise(r => setTimeout(r, 300));
+          }
+        );
       }
-    });
-    
-    // Create a span
-    const span = Sentry.startInactiveSpan({
-      name: "test-span",
-      op: "test",
-      attributes: {
-        path: '/debug-sentry/span',
-        query: req.query
-      }
-    });
-    
-    // Simulate an error
-    try {
-      const obj = null;
-      obj.nonExistentMethod();
-    } catch (error) {
-      Sentry.captureException(error);
-      span.end();
-      res.status(500).send('Error captured with span and sent to Sentry');
-      return;
-    }
-    
-    span.end();
-    res.send('Span completed successfully');
+    );
+
+    // make sure events actually get sent before reply (important on Vercel)
+    try { await Sentry.flush(2000); } catch {}
+
+    res.send('Performance data sent to Sentry');
   } catch (error) {
-    console.error('Error in span test route:', error);
-    res.status(500).send('Error in span test route');
+    console.error('Error in performance test route:', error);
+    res.status(500).send('Error in performance test route');
   }
-}); 
+});
+
 
 // Test with performance monitoring using spans
 app.get("/debug-sentry/performance", async function(req, res) {
