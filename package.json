@@ -30,6 +30,10 @@
     "check-all-boards": "node scripts/check-all-boards.js",
     "setup-production-webhook": "node scripts/setup-production-webhook.js create",
     "test-production-setup": "node scripts/setup-production-webhook.js test",
+    "test-discord": "node scripts/test-discord.js",
+    "test-monday-webhook": "node scripts/test-monday-webhook.js",
+    "test-multiple-items": "node scripts/test-multiple-items.js",
+    "fetch-real-items": "node scripts/fetch-real-items.js",
     "prepare": "husky",
     "postinstall": "husky",
     "sentry:sourcemaps": "npx @sentry/wizard -i sourcemaps --saas"
@@ -51,7 +55,8 @@
     "node-cron": "^3.0.3",
     "nodemailer": "^6.10.0",
     "path": "^0.12.7",
-    "snyk": "^1.1295.4"
+    "snyk": "^1.1295.4",
+    "vercel": "^46.0.2"
   },
   "devDependencies": {
     "husky": "^9.1.7",

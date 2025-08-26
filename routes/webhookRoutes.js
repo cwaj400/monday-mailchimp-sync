@@ -75,6 +75,11 @@ router.post('/mailchimp', async (req, res) => {
         span.setStatus({ code: Sentry.SpanStatusType.ERROR });
         span.end();
       }
+    }).finally(() => {
+      // Ensure span is always ended, even if processWebhook doesn't handle it
+      if (span && !span.isFinished()) {
+        span.end();
+      }
     });
   } catch (error) {
     console.error('Error in webhook endpoint:', error);
@@ -87,6 +92,15 @@ router.post('/mailchimp', async (req, res) => {
     if (span) {
       span.setStatus({ code: Sentry.SpanStatusType.ERROR });
       span.end();
+    }
+    
+    // Send error response to prevent hanging requests
+    if (!res.headersSent) {
+      res.status(500).json({ 
+        success: false, 
+        error: 'Internal server error',
+        message: 'Webhook processing failed'
+      });
     }
   }
 });
@@ -153,6 +167,11 @@ router.post('/monday', async (req, res) => {
         span.setStatus({ code: Sentry.SpanStatusType.ERROR });
         span.end();
       }
+    }).finally(() => {
+      // Ensure span is always ended, even if processMondayWebhookAsync doesn't handle it
+      if (span && !span.isFinished()) {
+        span.end();
+      }
     });
   } catch (error) {
     console.error('Error in Monday.com webhook endpoint:', error);
@@ -164,6 +183,15 @@ router.post('/monday', async (req, res) => {
     if (span) {
       span.setStatus({ code: Sentry.SpanStatusType.ERROR });
       span.end();
+    }
+    
+    // Send error response to prevent hanging requests
+    if (!res.headersSent) {
+      res.status(500).json({ 
+        success: false, 
+        error: 'Internal server error',
+        message: 'Monday.com webhook processing failed'
+      });
     }
   }
 });

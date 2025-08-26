@@ -15,7 +15,7 @@ router.get('/', (req, res) => {
     status: 'online',
     environment: process.env.VERCEL_ENV === 'preview' ? 'preview' : process.env.NODE_ENV || 'development',
     services: {
-      configured: !!process.env.MAILCHIMP_API_KEY && !!process.env.MAILCHIMP_AUDIENCE_ID && !!process.env.MAILCHIMP_AUDIENCE_NAME && !!process.env.MONDAY_API_KEY && !!process.env.MONDAY_BOARD_ID && !!process.env.DISCORD_WEBHOOK_URL,
+      configured: !!process.env.MAILCHIMP_API_KEY && !!process.env.MAILCHIMP_AUDIENCE_ID  && !!process.env.MONDAY_API_KEY && !!process.env.MONDAY_BOARD_ID && !!process.env.DISCORD_WEBHOOK_URL,
     },
     timestamp: new Date().toISOString()
   });

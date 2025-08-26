@@ -47,7 +47,7 @@ async function enrollInMailchimpCampaign(email, itemDetails) {
     await addEnrollmentTag(cleanEmail);
     
     // Step 5: Add note to Monday.com item
-    await addEnrollmentNoteToMonday(itemDetails.id, cleanEmail, subscriberResult);
+    //await addEnrollmentNoteToMonday(itemDetails.id, cleanEmail, subscriberResult);
     
     // Step 6: Send Discord notification
     await sendEnrollmentNotification(cleanEmail, itemDetails, subscriberResult, startTime);

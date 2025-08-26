@@ -752,14 +752,24 @@ async function processMondayWebhook(webhookData) {
     
     console.log('Processing Monday.com webhook:', { type, eventType: event?.type, boardId, itemId });
     
-    // Only process item creation events
-    if (event?.type !== 'create_item') {
+    // Only process item creation events (Monday.com uses 'create_pulse' for item creation)
+    if (event?.type !== 'create_item' && event?.type !== 'create_pulse') {
       console.log('Skipping non-item-creation event:', event?.type);
       return { success: false, reason: 'Not an item creation event' };
     }
     
+    // Extract item ID from the event (Monday.com uses pulseId for item ID)
+    const actualItemId = itemId || event?.pulseId;
+    
+    if (!actualItemId) {
+      console.error('No item ID found in webhook data');
+      return { success: false, reason: 'No item ID found' };
+    }
+    
+    console.log('Processing item ID:', actualItemId);
+    
     // Get the newly created item details
-    const itemDetails = await getMondayItemDetails(itemId);
+    const itemDetails = await getMondayItemDetails(actualItemId);
     
     if (!itemDetails) {
       console.error('Could not retrieve item details for:', itemId);
