@@ -41,6 +41,14 @@ router.post('/mailchimp', async (req, res) => {
   let span = null;
   
   try {
+    // Basic request validation
+    if (!req.body || Object.keys(req.body).length === 0) {
+      return res.status(400).json({ 
+        success: false, 
+        error: 'Empty request body' 
+      });
+    }
+    
     // Start a Sentry span for performance monitoring (no callback in v9.x)
     span = startSpanManual({
       name: 'mailchimp_webhook',
@@ -69,8 +77,8 @@ router.post('/mailchimp', async (req, res) => {
         timestamp: new Date().toISOString()
       });
       
-      // Send a message event
-      Sentry.captureMessage('Test webhook message from Mailchimp endpoint', 'info');
+      // Send a message event for immediate visibility
+      Sentry.captureMessage('WEBHOOK TEST: Mailchimp endpoint called', 'info');
       
       // Add breadcrumb
       addBreadcrumb('Test webhook processed', 'webhook.test', {
