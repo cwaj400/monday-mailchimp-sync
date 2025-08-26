@@ -27,10 +27,10 @@ const logger = winston.createLogger({
   ]
 });
 
-// Add Sentry transport for error reporting
+// Add Sentry transport for error reporting and info logging
 if (process.env.SENTRY_DSN) {
   logger.add(new winston.transports.Console({
-    level: 'error',
+    level: 'info',
     format: winston.format.combine(
       winston.format.timestamp(),
       winston.format.errors({ stack: true }),
@@ -46,6 +46,20 @@ if (process.env.SENTRY_DSN) {
             }
           });
         }
+        
+        // Send info messages to Sentry as breadcrumbs
+        if (level === 'info' && meta.category === 'webhook') {
+          Sentry.addBreadcrumb({
+            message,
+            category: meta.category || 'info',
+            data: meta,
+            level: 'info'
+          });
+          
+          // Also send as a message for debugging
+          Sentry.captureMessage(message, 'info');
+        }
+        
         return `${timestamp} ${level}: ${message} ${stack ? `\n${stack}` : ''}`;
       })
     )

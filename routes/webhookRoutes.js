@@ -80,6 +80,9 @@ router.post('/mailchimp', async (req, res) => {
       // Also send a message event
       Sentry.captureMessage('Test webhook message from Mailchimp endpoint', 'info');
       
+      // Send a direct message for immediate visibility
+      Sentry.captureMessage('WEBHOOK TEST: Mailchimp endpoint called', 'info');
+      
       // Add breadcrumb
       addBreadcrumb('Test webhook processed', 'webhook.test', {
         endpoint: '/api/webhooks/mailchimp',
