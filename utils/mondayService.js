@@ -492,8 +492,22 @@ async function getMondayItemDetails(itemId) {
         }
       }
     `;
+
+    logger.info('Executing query', {
+      query: query,
+      itemId: itemId,
+      function: 'getMondayItemDetails'
+    });
     
     const result = await executeQuery(query);
+    
+    logger.info('Query result received', {
+      hasData: !!result?.data,
+      hasItems: !!result?.data?.items,
+      itemCount: result?.data?.items?.length || 0,
+      itemId: itemId,
+      function: 'getMondayItemDetails'
+    });
     
     if (result.data && result.data.items && result.data.items.length > 0) {
       logger.info('Executed query successfully', {
@@ -896,6 +910,15 @@ async function processMondayWebhook(webhookData) {
     
     // Extract item ID from the event (Monday.com uses pulseId for item ID)
     const actualItemId = event?.pulseId;
+    
+    logger.info('Extracted item ID from webhook', {
+      pulseId: event?.pulseId,
+      itemId: event?.itemId,
+      actualItemId: actualItemId,
+      eventType: event?.type,
+      boardId: event?.boardId,
+      function: 'processMondayWebhook'
+    });
     
     if (!actualItemId) {
       logger.error('No item ID found in webhook data');

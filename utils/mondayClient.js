@@ -1,5 +1,7 @@
 const axios = require('axios');
 require('dotenv').config();
+const Sentry = require('@sentry/node');
+const logger = require('../logger');
 
 // Export these for testing
 let MONDAY_API_KEY = process.env.MONDAY_API_KEY;
@@ -11,11 +13,11 @@ function createMondayClient() {
   // Create an axios instance for Monday.com API
   return axios.create({
     baseURL: MONDAY_API_URL,
-    timeout: 30000, // 30 second timeout
+    timeout: 45000, // 45 second timeout (increased)
     headers: {
       'Content-Type': 'application/json',
       'Authorization': MONDAY_API_KEY
-    }
+    },
   });
 }
 
@@ -32,6 +34,11 @@ async function executeQuery(query, variables = {}) {
   try {
     // Remove any line breaks and extra spaces from the query
     const cleanQuery = query.replace(/\n\s*/g, ' ').trim();
+    logger.info('Executing query now its cleaned', {
+      query: cleanQuery,
+      variables: variables,
+      function: 'executeQuery'
+    });
     
     const response = await mondayClient.post('', {
       query: cleanQuery,
@@ -46,7 +53,8 @@ async function executeQuery(query, variables = {}) {
     
     return response.data;
   } catch (error) {
-    console.error('Monday.com API error:', {
+    Sentry.captureException(error, { extra: { phase: 'executeQuery' } });
+    logger.error('Monday.com API error:', {
       message: error.message,
       code: error.code,
       response: error.response?.data,

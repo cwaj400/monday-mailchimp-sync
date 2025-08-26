@@ -367,7 +367,7 @@ async function processMondayWebhookSpanWrapped(body, parentSpan) {
     span.setStatus('ok');
     span.end();
 
-      try { await Sentry.flush(2000); } catch {}
+      
 
     Sentry.addBreadcrumb({
       category: 'webhook.monday',
@@ -409,6 +409,7 @@ async function processMondayWebhookSpanWrapped(body, parentSpan) {
         'FFA500'
       );
     }
+  try { await Sentry.flush(2000); } catch {}
   } catch (error) {
     Sentry.addBreadcrumb({
       category: 'webhook.monday',
