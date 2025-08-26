@@ -9,7 +9,6 @@ const { handleEmailOpen } = require('./webhookHandlers/handleEmailOpen.js');
 const { handleEmailClick } = require('./webhookHandlers/handleEmailClick.js');
 const { addBreadcrumb, startSpanManual, Sentry } = require('../utils/sentry');
 const { processMondayWebhook } = require('../utils/mondayService');
-const { logger, logHelpers } = require('../utils/logger');
 
 const dotenv = require('dotenv');
 dotenv.config();
@@ -49,13 +48,6 @@ router.post('/mailchimp', async (req, res) => {
       forceTransaction: true
     });
     
-    // Log webhook received with Winston (automatically goes to Sentry)
-    logHelpers.webhook('received', {
-      type: req.body.type || 'unknown',
-      hasMandrill: !!req.body.mandrill_events,
-      endpoint: '/api/webhooks/mailchimp'
-    });
-    
     // Add breadcrumb for webhook received
     addBreadcrumb(
       'Mailchimp webhook received',
@@ -68,20 +60,16 @@ router.post('/mailchimp', async (req, res) => {
     
     // Force a test event to Sentry for debugging
     if (req.body.type === 'test') {
-      logger.info('🔍 Sending test event to Sentry for debugging...', {
-        category: 'webhook',
-        test: true,
-        endpoint: '/api/webhooks/mailchimp'
-      });
+      console.log('🔍 Sending test event to Sentry for debugging...');
       
-      // Send a test error through Winston (will go to Sentry)
-      logger.error('Test webhook error for Sentry debugging', new Error('Test webhook event for Sentry debugging'), {
+      // Send a test error to Sentry
+      Sentry.captureException(new Error('Test webhook event for Sentry debugging'), {
         context: 'Test webhook debugging',
         webhookType: 'test',
         timestamp: new Date().toISOString()
       });
       
-      // Also send a message event
+      // Send a message event
       Sentry.captureMessage('Test webhook message from Mailchimp endpoint', 'info');
       
       // Add breadcrumb
@@ -96,8 +84,9 @@ router.post('/mailchimp', async (req, res) => {
 
     // Process the webhook asynchronously
     processWebhook(req, res, span).catch(error => {
-      // Log error with Winston (automatically goes to Sentry)
-      logHelpers.error('Error in background webhook processing', error, {
+      // Log error to Sentry
+      Sentry.captureException(error, {
+        context: 'Background webhook processing',
         webhookType: req.body.type || 'unknown',
         hasMandrill: !!req.body.mandrill_events
       });
@@ -114,8 +103,9 @@ router.post('/mailchimp', async (req, res) => {
       }
     });
   } catch (error) {
-    // Log error with Winston (automatically goes to Sentry)
-    logHelpers.error('Error in webhook endpoint', error, {
+    // Log error to Sentry
+    Sentry.captureException(error, {
+      context: 'Webhook endpoint',
       endpoint: '/api/webhooks/mailchimp',
       body: req.body
     });
@@ -144,10 +134,7 @@ router.post('/monday', async (req, res) => {
   try {
     // Handle webhook verification challenge
     if (req.body.challenge) {
-      logger.info('🔐 Monday.com webhook verification challenge received', {
-        challenge: req.body.challenge,
-        category: 'webhook'
-      });
+      console.log('🔐 Monday.com webhook verification challenge received:', req.body.challenge);
       
       // Return the challenge token as required by Monday.com
       return res.status(200).json({ challenge: req.body.challenge });
@@ -175,14 +162,6 @@ router.post('/monday', async (req, res) => {
       forceTransaction: true
     });
     
-    // Log webhook received with Winston (automatically goes to Sentry)
-    logHelpers.webhook('received', {
-      type: req.body.type || 'unknown',
-      eventType: req.body.event?.type || 'unknown',
-      itemId: req.body.itemId || 'unknown',
-      endpoint: '/api/webhooks/monday'
-    });
-    
     // Add breadcrumb for webhook received
     addBreadcrumb(
       'Monday.com webhook received',
@@ -199,8 +178,9 @@ router.post('/monday', async (req, res) => {
 
     // Process the webhook asynchronously
     processMondayWebhookAsync(req, res, span).catch(error => {
-      // Log error with Winston (automatically goes to Sentry)
-      logHelpers.error('Error in background Monday.com webhook processing', error, {
+      // Log error to Sentry
+      Sentry.captureException(error, {
+        context: 'Background Monday.com webhook processing',
         webhookType: req.body.type || 'unknown'
       });
       
@@ -215,8 +195,9 @@ router.post('/monday', async (req, res) => {
       }
     });
   } catch (error) {
-    // Log error with Winston (automatically goes to Sentry)
-    logHelpers.error('Error in Monday.com webhook endpoint', error, {
+    // Log error to Sentry
+    Sentry.captureException(error, {
+      context: 'Monday.com webhook endpoint',
       endpoint: '/api/webhooks/monday',
       body: req.body
     });
