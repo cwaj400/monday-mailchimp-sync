@@ -2,19 +2,25 @@ const axios = require('axios');
 const dotenv = require('dotenv');
 const { sendDiscordNotification } = require('../../utils/discordNotifier');
 const { findMondayItemByEmail, incrementTouchpoints, addNoteToMondayItem } = require('../../utils/mondayService');
-const { captureException, addBreadcrumb, startSpan, Sentry } = require('../../utils/sentry');
+const Sentry = require('@sentry/node');
+const logger = require('../../utils/logger');
 dotenv.config();
 
 const MAILCHIMP_API_KEY = process.env.MAILCHIMP_API_KEY;
 const MAILCHIMP_SERVER_PREFIX = process.env.MAILCHIMP_SERVER_PREFIX;
 
 exports.handleCampaignEvent = async function(req, res) {
-    console.info('handleCampaignEvent');
+    logger.info('handleCampaignEvent called', {
+      campaignId: req.data.id,
+      status: req.data.status,
+      subject: req.data.subject,
+      endpoint: '/api/webhook/handle-campaign-event'
+    });
     let span = null;
     
     try {
       // Start a Sentry span (no callback in v9.x)
-      span = startSpan({
+      span = Sentry.startSpan({
         name: 'handleCampaignEvent',
         op: 'webhook.campaign',
         attributes: {
@@ -35,11 +41,16 @@ exports.handleCampaignEvent = async function(req, res) {
         status = eventData.data.status;
         subject = eventData.data.subject || 'No Subject';
 
-        addBreadcrumb('Campaign event received', 'webhook', {
+        Sentry.addBreadcrumb({
+          category: 'webhook',
+          message: 'Campaign event received',
+          level: 'info',
+          data: {
           campaignId: campaignId,
           status: status,
           subject: subject,
           eventData: eventData
+          }
         });
         
 
@@ -64,15 +75,16 @@ exports.handleCampaignEvent = async function(req, res) {
       }
 
       // Add breadcrumb for campaign event
-      addBreadcrumb(
-        'Campaign event received', 
-        'webhook', 
-        {
+      Sentry.addBreadcrumb({
+        category: 'webhook',
+        message: 'Campaign event received',
+        level: 'info',
+        data: {
           campaignId,
           status,
           subject
         }
-      );
+      });
       
       console.log(`Campaign ${campaignId} status: ${status}, subject: ${subject}`);
       
@@ -83,11 +95,12 @@ exports.handleCampaignEvent = async function(req, res) {
       // Only process sent campaigns
       if (status !== 'sent') {
         // Add breadcrumb for non-sent campaign
-        addBreadcrumb(
-          'Campaign not sent, skipping processing', 
-          'webhook', 
-          { campaignId, status }
-        );
+        Sentry.addBreadcrumb({
+          category: 'webhook',
+          message: 'Campaign not sent, skipping processing',
+          level: 'info',
+          data: { campaignId, status }
+        });
         
         // If res is available, send response, otherwise just log
         if (res) {
@@ -109,11 +122,12 @@ exports.handleCampaignEvent = async function(req, res) {
       }
       
       // Add breadcrumb for API request
-      addBreadcrumb(
-        'Fetching campaign details', 
-        'api.mailchimp', 
-        { campaignId }
-      );
+      Sentry.addBreadcrumb({
+        category: 'api.mailchimp',
+        message: 'Fetching campaign details',
+        level: 'info',
+        data: { campaignId }
+      });
       
       const campaign = campaignResponse.data;
       const campaignTitle = campaign.settings.title || subject || 'Untitled Campaign';
@@ -125,14 +139,15 @@ exports.handleCampaignEvent = async function(req, res) {
       console.log(`Processing campaign: "${campaignTitle}"`);
       
       // Add breadcrumb for recipients request
-      addBreadcrumb(
-        'Fetching campaign recipients', 
-        'api.mailchimp', 
-        { campaignId }
-      );
+      Sentry.addBreadcrumb({
+        category: 'api.mailchimp',
+        message: 'Fetching campaign recipients',
+        level: 'info',
+        data: { campaignId }
+      });
       
       // Create a child span for recipients API request
-      const recipientsSpan = span ? startSpan({
+      const recipientsSpan = span ? Sentry.startSpan({
         name: 'fetch_campaign_recipients',
         op: 'http.client',
         attributes: { campaignId }
@@ -158,14 +173,15 @@ exports.handleCampaignEvent = async function(req, res) {
       console.log(`Found ${recipients.length} recipients for campaign`);
       
       // Add breadcrumb for recipients count
-      addBreadcrumb(
-        'Recipients retrieved', 
-        'api.mailchimp', 
-        { recipientCount: recipients.length }
-      );
+      Sentry.addBreadcrumb({
+        category: 'api.mailchimp',
+        message: 'Recipients retrieved',
+        level: 'info',
+        data: { recipientCount: recipients.length }
+      });
       
       // Create a child span for processing recipients
-      const processingSpan = span ? startSpan({
+      const processingSpan = span ? Sentry.startSpan({
         name: 'process_recipients',
         op: 'task',
         attributes: { 
@@ -186,11 +202,12 @@ exports.handleCampaignEvent = async function(req, res) {
           console.log(`Processing recipient: ${email}`);
           
           // Add breadcrumb for recipient processing
-          addBreadcrumb(
-            'Processing recipient', 
-            'monday.api', 
-            { email }
-          );
+          Sentry.addBreadcrumb({
+            category: 'monday.api',
+            message: 'Processing recipient',
+            level: 'info',
+            data: { email }
+          });
           
           // Find Monday.com item by email
           const mondayItem = await findMondayItemByEmail(email);
@@ -199,26 +216,32 @@ exports.handleCampaignEvent = async function(req, res) {
             console.log(`Monday.com item not found for ${email}`);
             
             // Add breadcrumb for not found
-            addBreadcrumb(
-              'Monday item not found', 
-              'monday.api', 
-              { email },
-              'warning'
-            );
+            Sentry.addBreadcrumb({
+              category: 'monday.api',
+              message: 'Monday item not found',
+              level: 'warning',
+              data: { email }
+            });
             
             notFoundCount++;
             continue;
           }
           
+          logger.info('Monday item found', {
+            email,
+            mondayItemId: mondayItem.id
+          });
+
           // Add breadcrumb for Monday item found
-          addBreadcrumb(
-            'Monday item found', 
-            'monday.api', 
-            { 
+          Sentry.addBreadcrumb({
+            category: 'monday.api',
+            message: 'Monday item found',
+            level: 'info',
+            data: { 
               email, 
               mondayItemId: mondayItem.id 
             }
-          );
+          });
           
           // Add a note about the campaign
           const noteText = `📧 Email Sent: "${campaignTitle}", Subject: ${emailSubj}, Preview: ${emailPreview}, to ${email}`;
@@ -231,44 +254,52 @@ exports.handleCampaignEvent = async function(req, res) {
             console.log(`Incremented touchpoints for ${email} from ${result.previousValue} to ${result.newValue}`);
             
             // Add breadcrumb for successful update
-            addBreadcrumb(
-              'Touchpoints incremented', 
-              'monday.api', 
-              { 
+            Sentry.addBreadcrumb({
+              category: 'monday.api',
+              message: 'Touchpoints incremented',
+              level: 'info',
+              data: { 
                 email, 
                 mondayItemId: mondayItem.id,
                 previousValue: result.previousValue,
                 newValue: result.newValue
               }
-            );
+            });
             
             successCount++;
           } else if (result.error && result.error.includes('not found')) {
             // Add breadcrumb for not found error
-            addBreadcrumb(
-              'Touchpoints column not found', 
-              'monday.api', 
-              { 
+            Sentry.addBreadcrumb({
+              category: 'monday.api',
+              message: 'Touchpoints column not found',
+              level: 'warning',
+              data: { 
                 email, 
                 mondayItemId: mondayItem.id,
                 error: result.error
               },
-              'warning'
-            );
+            });
             
             notFoundCount++;
           } else {
+            Sentry.captureException(result.error, {
+              context: 'Failed to increment touchpoints',
+              email,
+              mondayItemId: mondayItem.id,
+              campaignId,
+              campaignTitle
+            });
             // Add breadcrumb for other errors
-            addBreadcrumb(
-              'Failed to increment touchpoints', 
-              'monday.api', 
-              { 
+            Sentry.addBreadcrumb({
+              category: 'monday.api',
+              message: 'Failed to increment touchpoints',
+              level: 'error',
+              data: { 
                 email, 
                 mondayItemId: mondayItem.id,
                 error: result.error
               },
-              'error'
-            );
+            });
             
             failureCount++;
           }
@@ -294,18 +325,6 @@ exports.handleCampaignEvent = async function(req, res) {
       
       console.log('Sending Discord notification');
       
-      // Add breadcrumb for Discord notification
-      addBreadcrumb(
-        'Sending Discord notification', 
-        'discord', 
-        {
-          campaignId,
-          campaignTitle,
-          successCount,
-          notFoundCount,
-          failureCount
-        }
-      );
 
       // Send a summary notification
       await sendDiscordNotification(
@@ -334,11 +353,6 @@ exports.handleCampaignEvent = async function(req, res) {
         failureCount
       };
       
-      // Finish the span
-      if (span) {
-        span.end();
-      }
-      
       // If res is available, send response, otherwise just return the result
       if (res) {
         return res.json(result);
@@ -356,10 +370,6 @@ exports.handleCampaignEvent = async function(req, res) {
         subject: subject
       });
       
-      // Set tags for easier filtering in Sentry dashboard
-      Sentry.setTag('error.context', 'Campaign processing');
-      Sentry.setTag('campaignId', campaignId || 'unknown');
-      
       // Send error notification
       await sendDiscordNotification(
         '❌ Failed to Process Campaign',
@@ -372,16 +382,7 @@ exports.handleCampaignEvent = async function(req, res) {
         },
         'ED4245' // Red color for errors
       );
-      
-      // Finish the span with error status
-      if (span) {
-        span.setStatus({ code: Sentry.SpanStatusType.ERROR });
-        // Add error details to span
-        span.setAttribute('error', true);
-        span.setAttribute('error.message', error.message);
-        span.setAttribute('error.type', error.name);
-        span.end();
-      }
+  
       
       // Create error result
       const errorResult = {
@@ -389,12 +390,8 @@ exports.handleCampaignEvent = async function(req, res) {
         details: error.message,
         campaignId: campaignId
       };
-      
+      logger.error('Error processing campaign:', errorResult);
       // If res is available, send response, otherwise just return the error
-      if (res) {
-        return res.status(500).json(errorResult);
-      } else {
-        return errorResult;
-      }
+      return res.status(500).json(errorResult);
     }
 }

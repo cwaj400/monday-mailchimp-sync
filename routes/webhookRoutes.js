@@ -44,41 +44,48 @@ router.post('/mailchimp', async (req, res) => {
     res.status(200).json({ success: true, message: 'Webhook received, processing' });
 
     // Process in background with a parent span
-    await Sentry.startSpan(
-      {
-        name: 'mailchimp_webhook',
-        op: 'webhook.receive',
-        attributes: {
+    const span = Sentry.startInactiveSpan({
+      name: 'mailchimp_webhook',
+      op: 'webhook.receive',
+      attributes: {
+        type: req.body.type || 'unknown',
+        hasMandrill: !!req.body.mandrill_events,
+        bodyKeys: Object.keys(req.body)
+      }
+    });
+
+    try {
+      Sentry.addBreadcrumb({
+        category: 'webhook.mailchimp',
+        message: 'Webhook received',
+        level: 'info',
+        data: {
           type: req.body.type || 'unknown',
-          hasMandrill: !!req.body.mandrill_events,
-          bodyKeys: Object.keys(req.body)
+          hasMandrill: !!req.body.mandrill_events
         }
-      },
-      async () => {
+      });
+
+      if (req.body.type === 'test') {
+        Sentry.captureMessage('WEBHOOK TEST: Mailchimp endpoint called', 'info');
         Sentry.addBreadcrumb({
           category: 'webhook.mailchimp',
-          message: 'Webhook received',
+          message: 'Test webhook processed',
           level: 'info',
-          data: {
-            type: req.body.type || 'unknown',
-            hasMandrill: !!req.body.mandrill_events
-          }
+          data: { ts: new Date().toISOString() }
         });
-
-        if (req.body.type === 'test') {
-          Sentry.captureMessage('WEBHOOK TEST: Mailchimp endpoint called', 'info');
-          Sentry.addBreadcrumb({
-            category: 'webhook.mailchimp',
-            message: 'Test webhook processed',
-            level: 'info',
-            data: { ts: new Date().toISOString() }
-          });
-          return;
-        }
-
-        await processMailchimpWebhook(req);
+        span.setStatus('ok');
+        span.end();
+        return;
       }
-    );
+
+      await processMailchimpWebhook(req, span);
+      span.setStatus('ok');
+      span.end();
+    } catch (error) {
+      span.setStatus('error');
+      span.end();
+      throw error;
+    }
   } catch (error) {
     Sentry.captureException(error, {
       extra: { endpoint: '/api/webhooks/mailchimp', bodyKeys: Object.keys(req.body || {}) }
@@ -89,12 +96,16 @@ router.post('/mailchimp', async (req, res) => {
   }
 });
 
-async function processMailchimpWebhook(req) {
+async function processMailchimpWebhook(req, span) {
   // Mandrill (transactional) events arrive as a JSON string in mandrill_events
   if (req.body.mandrill_events) {
-    await Sentry.startSpan(
-      { name: 'process_mandrill_events', op: 'webhook.mandrill' },
-      async () => {
+    const mandrillSpan = Sentry.startInactiveSpan({
+      name: 'process_mandrill_events', 
+      op: 'webhook.mandrill'
+    });
+
+    try {
+      
         Sentry.addBreadcrumb({
           category: 'webhook.mandrill',
           message: 'Processing Mandrill events',
@@ -108,26 +119,11 @@ async function processMailchimpWebhook(req) {
           '0099FF'
         );
 
-        const events = await Sentry.startSpan(
-          { name: 'parse_mandrill_json', op: 'json.parse' },
-          async () => JSON.parse(req.body.mandrill_events)
-        );
+          mandrillSpan.setAttribute('custom_data', 'This is custom data');
+          mandrillSpan.setAttribute('custom_tag', 'test_value');
+          const parsedEvents = JSON.parse(req.body.mandrill_events);
 
-        for (const event of events) {
-          await Sentry.startSpan(
-            {
-              name: `mandrill_${event.event}`,
-              op: `webhook.mandrill.${event.event}`,
-              attributes: { email: event.msg?.email || null }
-            },
-            async () => {
-              Sentry.addBreadcrumb({
-                category: 'webhook.mandrill',
-                message: `Processing ${event.event}`,
-                level: 'info',
-                data: { email: event.msg?.email }
-              });
-
+        for (const event of parsedEvents) {
               switch (event.event) {
                 case 'subscribe':
                   await handleSubscriberEvent(event, null, 'subscribe');
@@ -153,28 +149,20 @@ async function processMailchimpWebhook(req) {
                   });
               }
             }
-          );
-        }
-      }
-    );
+      
+      mandrillSpan.setStatus('ok');
+      mandrillSpan.end();
+    } catch (error) {
+      mandrillSpan.setStatus('error');
+      mandrillSpan.end();
+      throw error;
+    }
     return;
   }
 
   // Regular Mailchimp campaign/lists webhooks
   if (req.body.type) {
-    await Sentry.startSpan(
-      {
-        name: `mailchimp_${req.body.type}`,
-        op: `webhook.mailchimp.${req.body.type}`,
-        attributes: { type: req.body.type }
-      },
-      async () => {
-        Sentry.addBreadcrumb({
-          category: 'webhook.mailchimp',
-          message: 'Processing Mailchimp webhook',
-          level: 'info',
-          data: { type: req.body.type }
-        });
+
 
         switch (req.body.type) {
           case 'subscribe':
@@ -196,15 +184,8 @@ async function processMailchimpWebhook(req) {
             await handleEmailClick(req.body, null);
             break;
           default:
-            Sentry.addBreadcrumb({
-              category: 'webhook.mailchimp',
-              message: 'Unhandled Mailchimp type',
-              level: 'warning',
-              data: { type: req.body.type }
-            });
+            break;
         }
-      }
-    );
     return;
   }
 
@@ -265,30 +246,26 @@ router.post('/monday', async (req, res) => {
     res.status(200).json({ success: true, message: 'Monday webhook received, processing' });
 
     // Process in background with a parent span
-    await Sentry.startSpan(
-      {
-        name: `monday_webhook_${req.body.event?.type || 'unknown'}_${req.body.event?.pulseId || 'no_id'}`,
-        op: 'webhook.receive',
-        attributes: {
-          type: req.body.type || 'unknown',
-          eventType: req.body.event?.type || 'unknown',
-          itemId: req.body.itemId || req.body.event?.pulseId || 'unknown'
-        }
-      },
-      async () => {
-        Sentry.addBreadcrumb({
-          category: 'webhook.monday',
-          message: 'Webhook received',
-          level: 'info',
-          data: {
-            eventType: req.body.event?.type || 'unknown',
-            itemId: req.body.itemId || req.body.event?.pulseId || 'unknown'
-          }
-        });
-
-        await processMondayWebhookSpanWrapped(req.body);
+    const span = Sentry.startInactiveSpan({
+      name: `monday_webhook_${req.body.event?.type || 'unknown'}_${req.body.event?.pulseId || 'no_id'}`,
+      op: 'webhook.receive',
+      attributes: {
+        type: req.body.type || 'unknown',
+        eventType: req.body.event?.type || 'unknown',
+        itemId: req.body.itemId || req.body.event?.pulseId || 'unknown'
       }
-    );
+    });
+
+    try {
+      await processMondayWebhookSpanWrapped(req.body, span);
+      span.setStatus('ok');
+      span.end();
+    } catch (error) {
+      span.setStatus('error');
+      span.end();
+      throw error;
+    }
+      
   } catch (error) {
     Sentry.captureException(error, {
       extra: { endpoint: '/api/webhooks/monday', bodyKeys: Object.keys(req.body || {}) }
@@ -299,7 +276,7 @@ router.post('/monday', async (req, res) => {
   }
 });
 
-async function processMondayWebhookSpanWrapped(body) {
+async function processMondayWebhookSpanWrapped(body, parentSpan) {
   Sentry.addBreadcrumb({
     category: 'webhook.monday',
     message: 'Starting processMondayWebhook',
@@ -308,10 +285,11 @@ async function processMondayWebhookSpanWrapped(body) {
   });
 
   try {
-    const result = await Sentry.startSpan(
-      { name: 'processMondayWebhook', op: 'service.monday' },
-      async () => processMondayWebhook(body)
-    );
+    const span = await Sentry.startInactiveSpan(
+      { name: 'processMondayWebhook', op: 'service.monday' });
+      span.setStatus('ok');
+      const result = await processMondayWebhook(body);
+      span.end();
 
     Sentry.addBreadcrumb({
       category: 'webhook.monday',

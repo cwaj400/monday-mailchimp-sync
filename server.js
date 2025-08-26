@@ -3,6 +3,7 @@ require('./instrument.js');
 const express = require('express');
 const cors = require('cors');
 const { apiKeyAuth } = require('./utils/authMiddleware');
+const { logger } = require('./utils/logger');
 
 // Import Sentry after initialization
 const Sentry = require('@sentry/node');
@@ -118,6 +119,94 @@ app.get('/debug-sentry/performance', async (req, res) => {
   } catch (error) {
     console.error('Error in performance test route:', error);
     res.status(500).send('Error in performance test route');
+  }
+});
+
+// New endpoint showing manual span management
+app.get('/debug-sentry/manual-span', async (req, res) => {
+  try {
+    // Use Pino logger (logs to console AND creates Sentry breadcrumbs)
+    logger.info('Manual span test started', {
+      spanName: 'manual-test-span',
+      environment: process.env.NODE_ENV
+    });
+    // Create a span manually (this gives you access to the span object)
+    const span = Sentry.startInactiveSpan({
+      name: 'manual-test-span',
+      op: 'test.manual'
+    });
+
+    // Use the correct Sentry v9 API
+    span.setAttribute('custom_data', 'This is custom data');
+    span.setAttribute('custom_tag', 'test_value');
+    span.setStatus('ok');
+
+    // Add breadcrumbs using Sentry v9 API
+    Sentry.addBreadcrumb({
+      category: 'manual.span',
+      message: 'Starting manual span test',
+      level: 'info',
+      data: {
+        spanName: span.name,
+        timestamp: new Date().toISOString()
+      }
+    });
+
+    // Simulate some work
+    await new Promise(r => setTimeout(r, 200));
+
+    // Use Pino logger for processing
+    logger.info('Processing completed', {
+      processingTime: '200ms',
+      spanName: span.name
+    });
+
+    // Log with span context
+    logger.logWithSpan(span, 'Processing with span context', {
+      step: 'processing',
+      spanName: span.name
+    });
+
+    // Log a warning (creates breadcrumb)
+    logger.warn('This is a warning message', {
+      warningType: 'test_warning',
+      spanName: span.name
+    });
+
+    // End the span manually
+    span.end();
+
+    Sentry.addBreadcrumb({
+      category: "user",
+      message: "User information goes here",
+      level: "info",
+      data: {
+        user: {
+          name: "John Doe",
+          email: "john.doe@example.com",
+          id: 123
+        }
+      }
+    });
+
+    
+
+    // Flush to ensure it's sent
+    try { await Sentry.flush(2000); } catch {}
+
+    res.json({ 
+      success: true, 
+      message: 'Manual span created and sent to Sentry',
+      spanInfo: {
+        name: span.name,
+        status: span.status,
+        attributes: span.attributes,
+        duration: span.duration
+      }
+    });
+  } catch (error) {
+    console.error('Error in manual span test:', error);
+    res.status(500).json({ error: 'Manual span test failed', message: error.message });
   }
 });
 

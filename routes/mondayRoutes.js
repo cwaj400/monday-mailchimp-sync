@@ -2,7 +2,8 @@ const express = require('express');
 const router = express.Router();
 const { executeQuery } = require('../utils/mondayClient');
 const { findMondayItemByEmail, getXMondayContacts, getAllMondayContacts } = require('../utils/mondayService');
-const { addBreadcrumb, startSpan } = require('../utils/sentry');
+const Sentry = require('@sentry/node');
+const logger = require('../utils/logger');
 
 router.get('/', (req, res) => {
   res.json({
@@ -14,11 +15,17 @@ router.get('/find-by-email', async (req, res) => {
   let span = null;
   
   try {
+
+    logger.info('Monday.com find-by-email endpoint called', {
+      email: req.query.email,
+      endpoint: '/api/monday/find-by-email'
+    });
+
     // Force a test Sentry event to verify it's working
     Sentry.captureMessage('TEST: Monday.com find-by-email endpoint called', 'info');
     
     // Start Sentry span for performance monitoring
-    span = startSpan({
+    span = Sentry.startSpan({
       name: 'monday_find_by_email',
       op: 'api.monday.find',
       attributes: { email: req.query.email }
@@ -33,7 +40,6 @@ router.get('/find-by-email', async (req, res) => {
     });
     
     if (!email) {
-      if (span) span.end();
       return res.status(400).json({ error: 'Email parameter is required' });
     }
     
@@ -47,7 +53,6 @@ router.get('/find-by-email', async (req, res) => {
         itemName: item.name
       });
       
-      if (span) span.end();
       return res.json({
         success: true,
         item: {
@@ -60,7 +65,6 @@ router.get('/find-by-email', async (req, res) => {
       addBreadcrumb('Monday.com item not found', 'api.monday', {
         email
       });
-      if (span) span.end();
       return res.status(404).json({
         success: false,
         message: `No item found with email: ${email}`
@@ -73,16 +77,11 @@ router.get('/find-by-email', async (req, res) => {
       email: req.query.email,
       endpoint: '/api/monday/find-by-email'
     });
-    if (span) span.end();
     
     return res.status(500).json({
       success: false,
       error: error.message
     });
-  } finally {
-    if (span) {
-      span.end();
-    }
   }
 });
 
@@ -91,7 +90,7 @@ router.get('/all-x-contacts', async (req, res) => {
   
   try {
     // Start Sentry span for performance monitoring
-    span = startSpan({
+    span = Sentry.startSpan({
       name: 'monday_get_contacts',
       op: 'api.monday.contacts',
       attributes: { quantity: req.query.quantity }
@@ -113,7 +112,6 @@ router.get('/all-x-contacts', async (req, res) => {
       contactCount: contacts.length || 0
     });
     
-    if (span) span.end();
     res.json(contacts);
   } catch (error) {
     // Log error to Sentry
@@ -122,15 +120,10 @@ router.get('/all-x-contacts', async (req, res) => {
       quantity: req.query.quantity,
       endpoint: '/api/monday/all-x-contacts'
     });
-    if (span) span.end();
     return res.status(500).json({
       success: false,
       error: error.message
     });
-  } finally {
-    if (span) {
-      span.end();
-    }
   }
 });
 

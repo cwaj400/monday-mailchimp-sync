@@ -1,6 +1,7 @@
 const { executeQuery } = require('./mondayClient');
 const dotenv = require('dotenv');
-const { startSpan, Sentry } = require('./sentry');
+const logger = require('./logger');
+const Sentry = require('@sentry/node');
 
 dotenv.config();
 
@@ -164,6 +165,12 @@ async function getMondayItem(itemId) {
  * @returns {Promise<Object|null>} - The matching item or null if not found
  */
 async function findMondayItemByEmail(email) {
+
+  logger.info('findMondayItemByEmail called', {
+    email: email,
+    endpoint: '/api/monday/find-by-email'
+  });
+
   if (!email) return null;
   
   console.log(`Finding Monday item for email: ${email}`);
@@ -466,6 +473,10 @@ async function getAllMondayContacts(maxItems = 0) {
  * @returns {Promise<Object|null>} - Item details or null if not found
  */
 async function getMondayItemDetails(itemId) {
+  logger.info('getMondayItemDetails called', {
+    itemId: itemId,
+    endpoint: '/api/monday/get-item-details'
+  });
   try {
     const query = `
       query {
@@ -485,7 +496,13 @@ async function getMondayItemDetails(itemId) {
     const result = await executeQuery(query);
     
     if (result.data && result.data.items && result.data.items.length > 0) {
+      logger.info('getMondayItemDetails result', {
+        itemId: itemId,
+        result: result.data,
+        endpoint: '/api/monday/get-item-details'
+      });
       const item = result.data.items[0];
+
       
       // Add title field to column_values for compatibility
       if (item.column_values) {
@@ -646,6 +663,13 @@ function extractEmailFromItem(item) {
       col.title && col.title.toLowerCase().includes('email')
     );
     if (column) {
+      logger.info('Found email in column title', {
+        columnTitle: column.title,
+        columnId: column.id,
+        email: email,
+        itemId: item.id
+      });
+      
       const email = extractEmailFromColumn(column);
       if (email) {
         console.log(`Found email in column title "${column.title}": ${email}`);
@@ -810,16 +834,20 @@ function validateAndCleanEmail(email) {
  * @returns {Promise<Object>} - Result of processing
  */
 async function processMondayWebhook(webhookData) {
+  logger.info('processMondayWebhook called', {
+    webhookData: webhookData,
+    endpoint: '/api/monday/process-webhook'
+  });
   // Monday.com webhook structure: { event: { type, pulseId, boardId, ... } }
   const event = webhookData.event;
   
   // Create a Sentry span for the entire webhook processing
-  const span = startSpan({
+  const span = Sentry.startSpan({
     name: `monday_webhook_${event?.type || 'unknown'}_${event?.pulseId || 'no_id'}`,
     op: 'webhook.monday.process',
   });
 
-  try {
+  try { 
     
     // Add breadcrumb for webhook received
     Sentry.addBreadcrumb({
@@ -843,6 +871,10 @@ async function processMondayWebhook(webhookData) {
     
     // Only process item creation events (Monday.com uses 'create_pulse' for item creation)
     if (event?.type !== 'create_item' && event?.type !== 'create_pulse') {
+      logger.info('Skipping non-item-creation event:', {
+        eventType: event?.type,
+        endpoint: '/api/monday/process-webhook'
+      });
       console.log('Skipping non-item-creation event:', event?.type);
       
       Sentry.addBreadcrumb({
@@ -916,7 +948,7 @@ async function processMondayWebhook(webhookData) {
     });
     
     // Extract email from the item
-    const emailSpan = startSpan({
+    const emailSpan = Sentry.startSpan({
       name: `extract_email_item_${actualItemId}`,
       op: 'email.extraction',
     });
@@ -959,7 +991,7 @@ async function processMondayWebhook(webhookData) {
     });
     
     // Enroll in Mailchimp campaign
-    const enrollmentSpan = startSpan({
+    const enrollmentSpan = Sentry.startSpan({
       name: `mailchimp_enrollment_${email}`,
       op: 'mailchimp.enrollment',
     });

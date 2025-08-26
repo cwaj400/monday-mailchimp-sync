@@ -2,7 +2,7 @@ const express = require('express');
 const router = express.Router();
 const mailchimp = require('@mailchimp/mailchimp_marketing');
 const { executeQuery } = require('../utils/mondayClient');
-const { addBreadcrumb, startSpan, Sentry } = require('../utils/sentry');
+const Sentry = require('@sentry/node');
 
 // Configure the Mailchimp client
 mailchimp.setConfig({
@@ -34,7 +34,7 @@ router.get('/mailchimp', async (req, res) => {
   
   try {
     // Start Sentry span for performance monitoring
-    span = startSpan({
+    span = Sentry.startSpan({
       name: 'status_mailchimp_check',
       op: 'api.status.mailchimp',
       attributes: {
@@ -107,10 +107,6 @@ router.get('/mailchimp', async (req, res) => {
       connected: false,
       message: error.response?.data?.detail || error.message
     });
-  } finally {
-    if (span) {
-      span.end();
-    }
   }
 });
 
@@ -120,13 +116,15 @@ router.get('/monday', async (req, res) => {
   
   try {
     // Start Sentry span for performance monitoring
-    span = startSpan({
+    span = Sentry.startInactiveSpan({
       name: 'status_monday_check',
       op: 'api.status.monday',
       attributes: {
         endpoint: '/api/status/monday'
       }
     });
+    span.setStatus('ok');
+    
     
     // Add breadcrumb for request
     addBreadcrumb('Monday.com status check request', 'api.status', {
@@ -144,6 +142,7 @@ router.get('/monday', async (req, res) => {
     `;
     
     const result = await executeQuery(query);
+
     
     if (result.data && result.data.me) {
       // Add breadcrumb for success
@@ -178,10 +177,6 @@ router.get('/monday', async (req, res) => {
       connected: false,
       message: error.response?.data?.error_message || error.message
     });
-  } finally {
-    if (span) {
-      span.end();
-    }
   }
 });
 

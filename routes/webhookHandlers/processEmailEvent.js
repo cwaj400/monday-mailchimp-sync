@@ -1,6 +1,7 @@
 const { findMondayItemByEmail, incrementTouchpoints, addNoteToMondayItem } = require('../../utils/mondayService');
 const { sendDiscordNotification } = require('../../utils/discordNotifier');
-const { addBreadcrumb, startSpan, Sentry } = require('../../utils/sentry');
+const Sentry = require('@sentry/node');
+const logger = require('../../utils/logger');
 const dotenv = require('dotenv');
 
 dotenv.config();
@@ -8,10 +9,15 @@ dotenv.config();
 // Common processing logic
 exports.processEmailEvent = async function(email, eventType, eventData) {
     let span = null;
-    
+    logger.info('processEmailEvent called', {
+      email: email,
+      eventType: eventType,
+      campaignTitle: eventData.campaignTitle
+    });
+
     try {
       // Start Sentry span for performance monitoring
-      span = startSpan({
+      span = Sentry.startSpan({
         name: 'process_email_event',
         op: 'webhook.email.process',
         attributes: {
@@ -24,10 +30,15 @@ exports.processEmailEvent = async function(email, eventType, eventData) {
       console.log('processEmailEvent');
       
       // Add breadcrumb for email event processing
-      addBreadcrumb('Processing email event', 'webhook.email', {
+      Sentry.addBreadcrumb({
+        category: 'webhook.email',
+        message: 'Processing email event',
+        level: 'info',
+        data: {
         email,
         eventType,
         campaignTitle: eventData.campaignTitle
+        }
       });
       
       // Find the Monday.com item by email

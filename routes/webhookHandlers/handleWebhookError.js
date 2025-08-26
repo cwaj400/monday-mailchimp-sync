@@ -1,11 +1,15 @@
 const { sendDiscordNotification } = require('../../utils/discordNotifier');
 const dotenv = require('dotenv');
-
+const logger = require('../../utils/logger');
 dotenv.config();
 
 // Error handler
 exports.handleWebhookError = async function(error, req, res) {
-    console.error('Error processing Mailchimp webhook:', error.message);
+    logger.error('Error processing Mailchimp webhook:', {
+      error: error.message,
+      eventType: req.body?.type || 'Unknown',
+      stackTrace: error.stack?.substring(0, 300) + '...'
+    });
     
     // Send Discord notification for errors
     await sendDiscordNotification(

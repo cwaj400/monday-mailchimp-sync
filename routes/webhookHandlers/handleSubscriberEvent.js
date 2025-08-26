@@ -1,11 +1,17 @@
 const { findMondayItemByEmail, addNoteToMondayItem } = require('../../utils/mondayService');
 const { sendDiscordNotification } = require('../../utils/discordNotifier');
 const dotenv = require('dotenv');
-
+const logger = require('../../utils/logger');
 dotenv.config();
 
 exports.handleSubscriberEvent = async function(req, res, eventType) {
-    console.log('handleSubscriberEvent');
+    logger.info('handleSubscriberEvent called', {
+      email: req.body.data.email,
+      listId: req.body.data.list_id,
+      eventType: eventType,
+      endpoint: '/api/webhook/handle-subscriber-event'
+    });
+  
     const email = req.body.data.email;
     const listId = req.body.data.list_id;
     const merges = req.body.data.merges || {};
