@@ -44,13 +44,19 @@ app.get("/debug-sentry", function mainHandler(req, res) {
 
 
 app.get('/sentry-diagnostics', (req, res) => {
-  const client = Sentry.getCurrentHub().getClient();
+  const hub = Sentry.getCurrentHub();
+  const client = hub.getClient();
+  const options = client ? client.getOptions?.() : {};
+
   res.json({
     initialized: !!client,
     dsnPresent: !!process.env.SENTRY_DSN,
-    environment: process.env.NODE_ENV,
+    dsnFromClient: options?.dsn || null,
+    environment: options?.environment || process.env.NODE_ENV,
+    release: options?.release || null,
   });
 });
+
 
 app.get('/debug-sentry/performance', async (req, res) => {
   try {
@@ -80,50 +86,6 @@ app.get('/debug-sentry/performance', async (req, res) => {
   } catch (error) {
     console.error('Error in performance test route:', error);
     res.status(500).send('Error in performance test route');
-  }
-});
-
-
-// Test with performance monitoring using spans
-app.get("/debug-sentry/performance", async function(req, res) {
-  try {
-    // Create a parent span
-    const parentSpan = Sentry.startInactiveSpan({
-      name: "test-performance",
-      op: "test"
-    });
-    
-    // Create a child span
-    const childSpan1 = Sentry.startInactiveSpan({
-      name: "test-operation-1",
-      op: "test.operation"
-    });
-    
-    // Simulate some work
-    await new Promise(resolve => setTimeout(resolve, 500));
-    
-    // End the first child span
-    childSpan1.end();
-    
-    // Create another child span
-    const childSpan2 = Sentry.startInactiveSpan({
-      name: "test-operation-2",
-      op: "test.operation"
-    });
-    
-    // Simulate more work
-    await new Promise(resolve => setTimeout(resolve, 300));
-    
-    // End the second child span
-    childSpan2.end();
-    
-    // End the parent span
-    parentSpan.end();
-    
-    res.send('Performance data sent to Sentry');
-  } catch (error) {
-    console.error('Error in performance test route:', error);
-    res.status(500).json({ error: 'Error in performance test route', message: error.message });
   }
 });
 
