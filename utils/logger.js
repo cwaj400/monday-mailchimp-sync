@@ -7,7 +7,7 @@ const logger = pino({
   base: {
     env: process.env.NODE_ENV,
     service: 'monday-mailchimp-sync'
-  }
+  } 
 });
 
 // Pino-Sentry integration

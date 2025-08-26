@@ -1,6 +1,6 @@
 const axios = require('axios');
 const dotenv = require('dotenv');
-const logger = require('./logger');
+const { logger } = require('./logger');
 const Sentry = require('@sentry/node');
 dotenv.config();
 
