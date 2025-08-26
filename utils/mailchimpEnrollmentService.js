@@ -1,7 +1,8 @@
 const { getMailchimpClient } = require('./mailchimpClient');
 const { sendDiscordNotification } = require('./discordNotifier');
-const { captureException, addBreadcrumb } = require('./sentry');
+const Sentry = require('@sentry/node');
 const { addNoteToMondayItem } = require('./mondayService');
+const { logger } = require('./logger');
 
 const dotenv = require('dotenv');
 dotenv.config();
@@ -23,9 +24,12 @@ async function enrollInMailchimpCampaign(email, itemDetails) {
   const startTime = Date.now();
   
   try {
-    console.log(`🎯 Starting Mailchimp enrollment for ${email} (Item: ${itemDetails.id})`);
-    
-    addBreadcrumb('Starting Mailchimp enrollment', 'mailchimp.enrollment', {
+    logger.info('Starting Mailchimp enrollment', {
+      email: email,
+      itemDetails: itemDetails,
+      route: '/api/monday/process-webhook'
+    });
+    Sentry.addBreadcrumb('Starting Mailchimp enrollment', 'mailchimp.enrollment', {
       email,
       itemId: itemDetails.id,
       itemName: itemDetails.name
@@ -52,8 +56,13 @@ async function enrollInMailchimpCampaign(email, itemDetails) {
     // Step 6: Send Discord notification
     await sendEnrollmentNotification(cleanEmail, itemDetails, subscriberResult, startTime);
     
-    console.log(`✅ Successfully enrolled ${cleanEmail} in Mailchimp (${Date.now() - startTime}ms)`);
-    
+    logger.info('Mailchimp enrollment completed', {
+      email: cleanEmail,
+      itemDetails: itemDetails,
+      route: '/api/monday/process-webhook',
+      processingTime: Date.now() - startTime,
+      subscriberResult: subscriberResult
+    });
     return {
       success: true,
       email: cleanEmail,
@@ -62,11 +71,16 @@ async function enrollInMailchimpCampaign(email, itemDetails) {
       mergeFields,
       processingTime: Date.now() - startTime
     };
-    
+
   } catch (error) {
-    console.error(`❌ Failed to enroll ${email} in Mailchimp:`, error.message);
+    logger.error('Mailchimp enrollment failed', {
+      email: email,
+      itemDetails: itemDetails,
+      route: '/api/monday/process-webhook',
+      error: error.message
+    });
     
-    captureException(error, {
+    Sentry.captureException(error, {
       context: 'Mailchimp enrollment',
       email,
       itemId: itemDetails?.id,
@@ -285,7 +299,7 @@ async function addSubscriberToAudience(email, mergeFields) {
     try {
       console.log(`📧 Adding subscriber ${email} to Mailchimp (attempt ${attempt}/${MAX_RETRIES})`);
       
-      addBreadcrumb('Adding subscriber to audience', 'mailchimp.api', {
+      Sentry.addBreadcrumb('Adding subscriber to audience', 'mailchimp.api', {
         email,
         audienceId: MAILCHIMP_AUDIENCE_ID,
         attempt

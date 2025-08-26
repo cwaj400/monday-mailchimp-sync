@@ -669,7 +669,7 @@ function extractEmailFromItem(item) {
         email: email,
         itemId: item.id
       });
-      
+
       const email = extractEmailFromColumn(column);
       if (email) {
         console.log(`Found email in column title "${column.title}": ${email}`);
@@ -891,7 +891,7 @@ async function processMondayWebhook(webhookData) {
     const actualItemId = event?.pulseId;
     
     if (!actualItemId) {
-      console.error('No item ID found in webhook data');
+      logger.error('No item ID found in webhook data');
       
       Sentry.captureException(new Error('No item ID found in Monday.com webhook'), {
         contexts: {
@@ -920,7 +920,7 @@ async function processMondayWebhook(webhookData) {
     const itemDetails = await getMondayItemDetails(actualItemId);
     
     if (!itemDetails) {
-      console.error('Could not retrieve item details for:', actualItemId);
+      logger.error('Could not retrieve item details for:', actualItemId);
       
       Sentry.captureException(new Error(`Could not retrieve item details for ${actualItemId}`), {
         contexts: {
@@ -995,6 +995,11 @@ async function processMondayWebhook(webhookData) {
       name: `mailchimp_enrollment_${email}`,
       op: 'mailchimp.enrollment',
     });
+    logger.info('Enrolling in Mailchimp campaign', {
+      email: email,
+      itemDetails: itemDetails,
+      route: '/api/monday/process-webhook'
+    });
     
     const { enrollInMailchimpCampaign } = require('./mailchimpEnrollmentService');
     const enrollmentResult = await enrollInMailchimpCampaign(email, itemDetails);
@@ -1034,7 +1039,7 @@ async function processMondayWebhook(webhookData) {
     };
     
   } catch (error) {
-    console.error('Error processing Monday.com webhook:', error);
+    logger.error('Error processing Monday.com webhook:', error);
     
     // Capture the exception with full context
     Sentry.captureException(error, {
