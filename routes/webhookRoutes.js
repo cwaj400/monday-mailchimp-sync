@@ -58,6 +58,16 @@ router.post('/mailchimp', async (req, res) => {
       }
     );
     
+    // Force a test event to Sentry for debugging
+    if (req.body.type === 'test') {
+      console.log('🔍 Sending test event to Sentry for debugging...');
+      captureException(new Error('Test webhook event for Sentry debugging'), {
+        context: 'Test webhook debugging',
+        webhookType: 'test',
+        timestamp: new Date().toISOString()
+      });
+    }
+    
     // Immediately acknowledge receipt to prevent timeout
     res.status(200).json({ success: true, message: 'Webhook received, processing in background' });
 
