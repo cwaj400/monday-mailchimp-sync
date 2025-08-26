@@ -883,7 +883,7 @@ function validateAndCleanEmail(email) {
  */
 async function processMondayWebhook(webhookData) {
   
-  logger.info('processMondayWebhook called', {
+  logger.info('processMondayWebhook called - DO WE NEED TO CALL BACK TO MONDAY?', {
     webhookData: webhookData,
     endpoint: '/api/monday/process-webhook'
   });

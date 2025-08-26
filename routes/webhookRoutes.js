@@ -325,6 +325,8 @@ router.post('/monday', async (req, res) => {
 
 async function processMondayWebhookSpanWrapped(body, parentSpan) {
 
+  Sentry.captureMessage('processMondayWebhookSpanWrapped called', 'info');
+
   logger.info('Starting processMondayWebhookSpanWrapped', {
     eventType: body.event?.type,
     pulseId: body.event?.pulseId,
@@ -346,11 +348,13 @@ async function processMondayWebhookSpanWrapped(body, parentSpan) {
     });
     
     span.setAttribute('function', 'processMondayWebhook');
-    span.setAttribute('body', JSON.stringify(body));
+    span.setAttribute('body of thing', JSON.stringify(body));
     
     logger.info('Calling processMondayWebhook', {
       eventType: body.event?.type,
       pulseId: body.event?.pulseId,
+      boardId: body.event?.boardId,
+      event: body.event,
       route: '/api/webhooks/monday'
     });
     
