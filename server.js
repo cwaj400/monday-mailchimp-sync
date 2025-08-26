@@ -133,7 +133,7 @@ app.get("/debug-sentry/performance", async function(req, res) {
     res.send('Performance data sent to Sentry');
   } catch (error) {
     console.error('Error in performance test route:', error);
-    res.status(500).send('Error in performance test route');
+    res.status(500).json({ error: 'Error in performance test route', message: error.message });
   }
 });
 
