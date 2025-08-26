@@ -14,10 +14,6 @@ router.get('/', (req, res) => {
 
 
 
-
-
-
-
 router.get('/test', (req, res) => {
   Sentry.captureMessage('TEST: Monday.com test endpoint called', 'info');
   logger.info('Monday.com test endpoint called', {
