@@ -4,8 +4,7 @@ const express = require('express');
 const bodyParser = require('body-parser');
 const cors = require('cors');
 const { apiKeyAuth } = require('./utils/authMiddleware');
-const Sentry = require('@sentry/node');
-const { setupExpressErrorHandler } = require('./utils/sentry');
+const { Sentry, setupExpressErrorHandler } = require('./utils/sentry');
 
 // Routes
 const webhookRoutes = require('./routes/webhookRoutes');
@@ -16,6 +15,8 @@ const homeRoute = require('./routes/homeRoute');
 const healthRoute = require('./routes/healthRoute');
 
 const app = express();
+app.use(Sentry.Handlers.requestHandler());
+app.use(Sentry.Handlers.tracingHandler());
 
 // Middleware
 app.use(cors());
@@ -38,7 +39,12 @@ app.use('/health', healthRoute);
 
 // Add test routes for Sentry
 app.get("/debug-sentry", function mainHandler(req, res) {
-  throw new Error("My first Sentry error!");
+  try {
+    throw new Error("My first Sentry error!");
+  } catch (error) {
+    Sentry.captureException(error);
+    res.status(500).json({ error: 'Error captured with span and sent to Sentry', message: "Check sentry" });
+  }
 });
 
 // Test with the new span-based API
@@ -128,14 +134,14 @@ app.get("/debug-sentry/performance", async function(req, res) {
 });
 
 // Set up Sentry error handler
-setupExpressErrorHandler(app);
+app.use(Sentry.Handlers.errorHandler());
 
 // Optional fallthrough error handler
 app.use(function onError(err, req, res, next) {
   // The error id is attached to `res.sentry` to be returned
   // and optionally displayed to the user for support.
   res.statusCode = 500;
-  res.end(res.sentry + "\n");
+  res.json({ error: 'Internal server error' + "\n", message: "Check sentry" });
 });
 
 const PORT = process.env.PORT || 4040;
