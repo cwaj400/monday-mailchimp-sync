@@ -10,6 +10,7 @@ const { handleEmailSend } = require('./webhookHandlers/handleEmailSend.js');
 const { handleEmailOpen } = require('./webhookHandlers/handleEmailOpen.js');
 const { handleEmailClick } = require('./webhookHandlers/handleEmailClick.js');
 const { processMondayWebhook } = require('../utils/mondayService');
+const { logger } = require('../utils/logger');
 
 // -- Simple health endpoints
 router.get('/', (_req, res) => {
@@ -204,6 +205,12 @@ async function processMailchimpWebhook(req, span) {
 // -----------------------------
 router.post('/monday', async (req, res) => {
   try {
+
+    logger.info('Monday webhook received', {
+      body: req.body,
+      route: '/api/webhooks/monday'
+    });
+
     // Verification challenge
     if (req.body?.challenge) {
       Sentry.addBreadcrumb({
@@ -224,6 +231,7 @@ router.post('/monday', async (req, res) => {
         .digest('base64');
 
       if (signature !== expected) {
+        logger.error('Invalid Monday.com webhook signature');
         Sentry.captureMessage('Invalid Monday.com webhook signature', 'error');
         return res.status(403).json({ error: 'Invalid signature' });
       }
@@ -263,6 +271,10 @@ router.post('/monday', async (req, res) => {
     } catch (error) {
       span.setStatus('error');
       span.end();
+      Sentry.captureException(error, {
+        extra: { endpoint: '/api/webhooks/monday', bodyKeys: Object.keys(req.body || {}) },
+        context: 'processMondayWebhookSpanWrapped'
+      });
       throw error;
     }
       
@@ -285,11 +297,20 @@ async function processMondayWebhookSpanWrapped(body, parentSpan) {
   });
 
   try {
-    const span = await Sentry.startInactiveSpan(
-      { name: 'processMondayWebhook', op: 'service.monday' });
-      span.setStatus('ok');
-      const result = await processMondayWebhook(body);
-      span.end();
+    const span = Sentry.startInactiveSpan({
+      name: 'processMondayWebhook', 
+      op: 'service.monday'
+    });
+    
+    span.setAttribute('function', 'processMondayWebhook');
+    span.setAttribute('body', JSON.stringify(body));
+    
+    const result = await processMondayWebhook(body);
+    
+    span.setStatus('ok');
+    span.end();
+
+      try { await Sentry.flush(2000); } catch {}
 
     Sentry.addBreadcrumb({
       category: 'webhook.monday',
