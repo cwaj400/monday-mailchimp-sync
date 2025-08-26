@@ -1,5 +1,6 @@
 const { executeQuery } = require('./mondayClient');
 const dotenv = require('dotenv');
+const Sentry = require('@sentry/node');
 
 dotenv.config();
 
@@ -590,6 +591,16 @@ function getColumnTitle(columnId, columnType) {
  */
 function extractEmailFromItem(item) {
   if (!item || !item.column_values) {
+    Sentry.addBreadcrumb({
+      category: 'email.extraction',
+      message: 'No item or column values for email extraction',
+      level: 'warning',
+      data: { 
+        hasItem: !!item,
+        hasColumnValues: !!item?.column_values,
+        itemId: item?.id
+      }
+    });
     return null;
   }
   
@@ -612,6 +623,18 @@ function extractEmailFromItem(item) {
       const email = extractEmailFromColumn(column);
       if (email) {
         console.log(`Found email in column ID ${columnId}: ${email}`);
+        
+        Sentry.addBreadcrumb({
+          category: 'email.extraction',
+          message: 'Email found by column ID',
+          level: 'info',
+          data: { 
+            columnId: columnId,
+            email: email,
+            itemId: item.id
+          }
+        });
+        
         return email;
       }
     }
@@ -626,6 +649,19 @@ function extractEmailFromItem(item) {
       const email = extractEmailFromColumn(column);
       if (email) {
         console.log(`Found email in column title "${column.title}": ${email}`);
+        
+        Sentry.addBreadcrumb({
+          category: 'email.extraction',
+          message: 'Email found by column title',
+          level: 'info',
+          data: { 
+            columnTitle: column.title,
+            columnId: column.id,
+            email: email,
+            itemId: item.id
+          }
+        });
+        
         return email;
       }
     }
@@ -636,11 +672,38 @@ function extractEmailFromItem(item) {
     const email = extractEmailFromColumn(column);
     if (email) {
       console.log(`Found email in column "${column.title}" (ID: ${column.id}): ${email}`);
+      
+      Sentry.addBreadcrumb({
+        category: 'email.extraction',
+        message: 'Email found by scanning all columns',
+        level: 'info',
+        data: { 
+          columnTitle: column.title,
+          columnId: column.id,
+          email: email,
+          itemId: item.id
+        }
+      });
+      
       return email;
     }
   }
   
   console.warn(`No valid email found in item ${item.id} (${item.name})`);
+  
+  Sentry.addBreadcrumb({
+    category: 'email.extraction',
+    message: 'No valid email found in item',
+    level: 'warning',
+    data: { 
+      itemId: item.id,
+      itemName: item.name,
+      columnCount: item.column_values.length,
+      columnIds: item.column_values.map(col => col.id),
+      columnTitles: item.column_values.map(col => col.title)
+    }
+  });
+  
   return null;
 }
 
@@ -747,9 +810,28 @@ function validateAndCleanEmail(email) {
  * @returns {Promise<Object>} - Result of processing
  */
 async function processMondayWebhook(webhookData) {
+  // Create a Sentry span for the entire webhook processing
+  const span = Sentry.startInactiveSpan({
+    name: 'process_monday_webhook',
+    op: 'webhook.monday.process',
+  });
+
   try {
     // Monday.com webhook structure: { event: { type, pulseId, boardId, ... } }
     const event = webhookData.event;
+    
+    // Add breadcrumb for webhook received
+    Sentry.addBreadcrumb({
+      category: 'webhook.monday',
+      message: 'Monday.com webhook received',
+      level: 'info',
+      data: {
+        eventType: event?.type,
+        boardId: event?.boardId,
+        pulseId: event?.pulseId,
+        webhookDataKeys: Object.keys(webhookData)
+      }
+    });
     
     console.log('Processing Monday.com webhook:', { 
       eventType: event?.type, 
@@ -761,6 +843,14 @@ async function processMondayWebhook(webhookData) {
     // Only process item creation events (Monday.com uses 'create_pulse' for item creation)
     if (event?.type !== 'create_item' && event?.type !== 'create_pulse') {
       console.log('Skipping non-item-creation event:', event?.type);
+      
+      Sentry.addBreadcrumb({
+        category: 'webhook.monday',
+        message: 'Skipped non-item-creation event',
+        level: 'info',
+        data: { eventType: event?.type }
+      });
+      
       return { success: false, reason: 'Not an item creation event' };
     }
     
@@ -769,30 +859,115 @@ async function processMondayWebhook(webhookData) {
     
     if (!actualItemId) {
       console.error('No item ID found in webhook data');
+      
+      Sentry.captureException(new Error('No item ID found in Monday.com webhook'), {
+        contexts: {
+          webhook: {
+            eventType: event?.type,
+            boardId: event?.boardId,
+            webhookData: webhookData
+          }
+        }
+      });
+      
       return { success: false, reason: 'No item ID found' };
     }
     
     console.log('Processing item ID:', actualItemId);
+    
+    // Add breadcrumb for item processing
+    Sentry.addBreadcrumb({
+      category: 'webhook.monday',
+      message: 'Processing Monday.com item',
+      level: 'info',
+      data: { itemId: actualItemId }
+    });
     
     // Get the newly created item details
     const itemDetails = await getMondayItemDetails(actualItemId);
     
     if (!itemDetails) {
       console.error('Could not retrieve item details for:', actualItemId);
+      
+      Sentry.captureException(new Error(`Could not retrieve item details for ${actualItemId}`), {
+        contexts: {
+          webhook: {
+            itemId: actualItemId,
+            eventType: event?.type,
+            boardId: event?.boardId
+          }
+        }
+      });
+      
       return { success: false, reason: 'Item not found' };
     }
+    
+    // Add breadcrumb for item details retrieved
+    Sentry.addBreadcrumb({
+      category: 'webhook.monday',
+      message: 'Item details retrieved successfully',
+      level: 'info',
+      data: { 
+        itemId: actualItemId,
+        itemName: itemDetails.name,
+        columnCount: itemDetails.column_values?.length || 0
+      }
+    });
     
     // Extract email from the item
     const email = extractEmailFromItem(itemDetails);
     
     if (!email) {
       console.log('No valid email found in item:', actualItemId);
+      
+      Sentry.addBreadcrumb({
+        category: 'webhook.monday',
+        message: 'No valid email found in item',
+        level: 'warning',
+        data: { 
+          itemId: actualItemId,
+          itemName: itemDetails.name,
+          columnValues: itemDetails.column_values?.map(col => ({ id: col.id, title: col.title }))
+        }
+      });
+      
       return { success: false, reason: 'No valid email found' };
     }
+    
+    // Add breadcrumb for email found
+    Sentry.addBreadcrumb({
+      category: 'webhook.monday',
+      message: 'Email extracted from item',
+      level: 'info',
+      data: { 
+        itemId: actualItemId,
+        email: email
+      }
+    });
     
     // Enroll in Mailchimp campaign
     const { enrollInMailchimpCampaign } = require('./mailchimpEnrollmentService');
     const enrollmentResult = await enrollInMailchimpCampaign(email, itemDetails);
+    
+    // Add breadcrumb for enrollment result
+    Sentry.addBreadcrumb({
+      category: 'webhook.monday',
+      message: 'Mailchimp enrollment completed',
+      level: enrollmentResult.success ? 'info' : 'error',
+      data: { 
+        itemId: actualItemId,
+        email: email,
+        enrollmentSuccess: enrollmentResult.success,
+        enrollmentError: enrollmentResult.error
+      }
+    });
+    
+    // Set span status based on result
+    if (span) {
+      span.setStatus({ 
+        code: enrollmentResult.success ? Sentry.SpanStatusType.OK : Sentry.SpanStatusType.ERROR 
+      });
+    }
     
     return {
       success: enrollmentResult.success,
@@ -803,10 +978,33 @@ async function processMondayWebhook(webhookData) {
     
   } catch (error) {
     console.error('Error processing Monday.com webhook:', error);
+    
+    // Capture the exception with full context
+    Sentry.captureException(error, {
+      contexts: {
+        webhook: {
+          eventType: webhookData?.event?.type,
+          boardId: webhookData?.event?.boardId,
+          pulseId: webhookData?.event?.pulseId,
+          webhookData: webhookData
+        }
+      }
+    });
+    
+    // Set span status to error
+    if (span) {
+      span.setStatus({ code: Sentry.SpanStatusType.ERROR });
+    }
+    
     return {
       success: false,
       error: error.message
     };
+  } finally {
+    // Always end the span
+    if (span) {
+      span.end();
+    }
   }
 }
 
