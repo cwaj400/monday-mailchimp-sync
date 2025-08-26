@@ -2,8 +2,10 @@ require('./instrument.js');
 
 const express = require('express');
 const cors = require('cors');
-const Sentry = require('@sentry/node');
 const { apiKeyAuth } = require('./utils/authMiddleware');
+
+// Import Sentry after initialization
+const Sentry = require('@sentry/node');
 
 // Routes
 const webhookRoutes = require('./routes/webhookRoutes');
@@ -32,6 +34,18 @@ app.get('/test', (req, res) => {
   res.json({ message: 'Hello World' });
 });
 
+app.get('/test-sentry', (req, res) => {
+  res.json({
+    sentryType: typeof Sentry,
+    sentryKeys: Object.keys(Sentry || {}),
+    hasGetCurrentHub: typeof Sentry.getCurrentHub === 'function',
+    hasInit: typeof Sentry.init === 'function',
+    hasCaptureException: typeof Sentry.captureException === 'function',
+    dsnPresent: !!process.env.SENTRY_DSN,
+    environment: process.env.NODE_ENV,
+  });
+});
+
 // Add test routes for Sentry
 app.get("/debug-sentry", function mainHandler(req, res) {
   try {
@@ -42,9 +56,20 @@ app.get("/debug-sentry", function mainHandler(req, res) {
   }
 });
 
-
 app.get('/sentry-diagnostics', (req, res) => {
   try {
+    // Check if Sentry is properly initialized
+    if (typeof Sentry.getCurrentHub !== 'function') {
+      return res.json({
+        initialized: false,
+        dsnPresent: !!process.env.SENTRY_DSN,
+        error: 'Sentry not properly initialized - getCurrentHub is not available',
+        environment: process.env.NODE_ENV,
+        sentryType: typeof Sentry,
+        sentryKeys: Object.keys(Sentry || {}),
+      });
+    }
+
     const hub = Sentry.getCurrentHub();
     const client = hub.getClient();
     const options = client ? client.getOptions?.() : {};
@@ -62,6 +87,8 @@ app.get('/sentry-diagnostics', (req, res) => {
       dsnPresent: !!process.env.SENTRY_DSN,
       error: error.message,
       environment: process.env.NODE_ENV,
+      sentryType: typeof Sentry,
+      sentryKeys: Object.keys(Sentry || {}),
     });
   }
 });
