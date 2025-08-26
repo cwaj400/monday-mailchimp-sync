@@ -11,6 +11,7 @@ function createMondayClient() {
   // Create an axios instance for Monday.com API
   return axios.create({
     baseURL: MONDAY_API_URL,
+    timeout: 30000, // 30 second timeout
     headers: {
       'Content-Type': 'application/json',
       'Authorization': MONDAY_API_KEY
@@ -45,7 +46,13 @@ async function executeQuery(query, variables = {}) {
     
     return response.data;
   } catch (error) {
-    console.log(error.message);
+    console.error('Monday.com API error:', {
+      message: error.message,
+      code: error.code,
+      response: error.response?.data,
+      status: error.response?.status,
+      timeout: error.code === 'ECONNABORTED'
+    });
     throw error;
   }
 }

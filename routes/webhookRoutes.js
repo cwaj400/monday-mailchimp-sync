@@ -274,7 +274,9 @@ router.post('/monday', async (req, res) => {
     logger.info('Creating parent span for processing', {
       eventType: req.body.event?.type,
       pulseId: req.body.event?.pulseId,
-      route: '/api/webhooks/monday'
+      route: '/api/webhooks/monday',
+      memoryUsage: process.memoryUsage(),
+      uptime: process.uptime()
     });
     const span = Sentry.startInactiveSpan({
       name: `monday_webhook_${req.body.event?.type || 'unknown'}_${req.body.event?.pulseId || 'no_id'}`,

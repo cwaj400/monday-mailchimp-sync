@@ -48,9 +48,39 @@ async function sendDiscordNotification(title, message, fields = {}, color = '344
         timestamp: new Date().toISOString()
       }]
     };
-    console.log('Payload:', payload);
-    // Send the notification
-    const response = await axios.post(webhookUrl, payload);
+    logger.info('Payload:', payload);
+    
+    // Send the notification with retry logic
+    let response;
+    let lastError;
+    
+    for (let attempt = 1; attempt <= 3; attempt++) {
+      try {
+        response = await axios.post(webhookUrl, payload, {
+          timeout: 10000, // 10 second timeout
+          headers: {
+            'Content-Type': 'application/json'
+          }
+        });
+        break; // Success, exit retry loop
+      } catch (error) {
+        lastError = error;
+        logger.warn(`Discord notification attempt ${attempt} failed:`, {
+          error: error.message,
+          attempt: attempt,
+          maxAttempts: 3
+        });
+        
+        if (attempt < 3) {
+          // Wait before retry (exponential backoff)
+          await new Promise(resolve => setTimeout(resolve, attempt * 1000));
+        }
+      }
+    }
+    
+    if (!response) {
+      throw lastError; // All attempts failed
+    }
     logger.info('Discord notification sent successfully', {
       response: response.data
     });

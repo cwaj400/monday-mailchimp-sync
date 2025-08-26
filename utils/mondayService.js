@@ -475,7 +475,7 @@ async function getAllMondayContacts(maxItems = 0) {
 async function getMondayItemDetails(itemId) {
   logger.info('getMondayItemDetails called', {
     itemId: itemId,
-    endpoint: '/api/monday/get-item-details'
+    function: 'getMondayItemDetails'
   });
   try {
     const query = `
@@ -496,10 +496,10 @@ async function getMondayItemDetails(itemId) {
     const result = await executeQuery(query);
     
     if (result.data && result.data.items && result.data.items.length > 0) {
-      logger.info('getMondayItemDetails result', {
+      logger.info('Executed query successfully', {
         itemId: itemId,
         result: result.data,
-        endpoint: '/api/monday/get-item-details'
+        function: 'getMondayItemDetails'
       });
       const item = result.data.items[0];
 
@@ -511,6 +511,12 @@ async function getMondayItemDetails(itemId) {
           title: getColumnTitle(col.id, col.type)
         }));
       }
+
+      logger.info('Add title field to column_values for compatibility', {
+        itemId: itemId,
+        item: item,
+        function: 'getMondayItemDetails'
+      });
       
       return item;
     }
