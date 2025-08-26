@@ -3,7 +3,7 @@ const router = express.Router();
 const { executeQuery } = require('../utils/mondayClient');
 const { findMondayItemByEmail, getXMondayContacts, getAllMondayContacts } = require('../utils/mondayService');
 const Sentry = require('@sentry/node');
-const logger = require('../utils/logger');
+const {logger}  = require('../utils/logger');
 
 router.get('/', (req, res) => {
   res.json({
@@ -26,12 +26,6 @@ router.get('/find-by-email', async (req, res) => {
     
     const email = req.query.email;
     
-    // Add breadcrumb for request
-    addBreadcrumb('Monday.com find by email request', 'api.monday', {
-      email: email || 'not_provided',
-      endpoint: '/api/monday/find-by-email'
-    });
-    
     if (!email) {
       return res.status(400).json({ error: 'Email parameter is required' });
     }
@@ -44,12 +38,6 @@ router.get('/find-by-email', async (req, res) => {
       const item = await findMondayItemByEmail(email);
       
       if (item) {
-        // Add breadcrumb for success
-        addBreadcrumb('Monday.com item found', 'api.monday', {
-          email,
-          itemId: item.id,
-          itemName: item.name
-        });
         
         return {
           success: true,
@@ -59,10 +47,6 @@ router.get('/find-by-email', async (req, res) => {
           }
         };
       } else {
-        // Add breadcrumb for not found
-        addBreadcrumb('Monday.com item not found', 'api.monday', {
-          email
-        });
         
         return {
           success: false,
@@ -96,12 +80,6 @@ router.get('/all-x-contacts', async (req, res) => {
   try {
     const x = req.query.quantity;
     
-    // Add breadcrumb for request
-    addBreadcrumb('Monday.com get contacts request', 'api.monday', {
-      quantity: x || 'not_provided',
-      endpoint: '/api/monday/all-x-contacts'
-    });
-    
     const contacts = await Sentry.startSpan({
       name: 'monday_get_contacts',
       op: 'api.monday.contacts',
@@ -109,11 +87,6 @@ router.get('/all-x-contacts', async (req, res) => {
     }, async () => {
       const contacts = await getAllMondayContacts(x);
       
-      // Add breadcrumb for success
-      addBreadcrumb('Monday.com contacts retrieved', 'api.monday', {
-        quantity: x,
-        contactCount: contacts.length || 0
-      });
       
       return contacts;
     });

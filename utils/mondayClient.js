@@ -1,7 +1,7 @@
 const axios = require('axios');
 require('dotenv').config();
 const Sentry = require('@sentry/node');
-const logger = require('../logger');
+const { logger } = require('./logger');
 
 // Export these for testing
 let MONDAY_API_KEY = process.env.MONDAY_API_KEY;
