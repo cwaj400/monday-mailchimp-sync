@@ -234,7 +234,7 @@ Check Mailchimp webhook configuration.
 
 ### Security Scanning
 - Snyk integration for vulnerability scanning
-- Pre-commit hooks for security checks
+- Pre-commit hooks for security checks (configured to allow commits with Vercel dependency issues)
 - **Note**: Vercel dependency vulnerabilities (like undici) are known issues that will be fixed in future Vercel updates
 
 ## 🚢 Deployment
