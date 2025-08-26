@@ -61,9 +61,20 @@ router.post('/mailchimp', async (req, res) => {
     // Force a test event to Sentry for debugging
     if (req.body.type === 'test') {
       console.log('🔍 Sending test event to Sentry for debugging...');
+      
+      // Send multiple types of events to test Sentry
       captureException(new Error('Test webhook event for Sentry debugging'), {
         context: 'Test webhook debugging',
         webhookType: 'test',
+        timestamp: new Date().toISOString()
+      });
+      
+      // Also send a message event
+      Sentry.captureMessage('Test webhook message from Mailchimp endpoint', 'info');
+      
+      // Add breadcrumb
+      addBreadcrumb('Test webhook processed', 'webhook.test', {
+        endpoint: '/api/webhooks/mailchimp',
         timestamp: new Date().toISOString()
       });
     }
