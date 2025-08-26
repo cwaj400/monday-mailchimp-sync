@@ -153,7 +153,12 @@ router.post('/monday', async (req, res) => {
   try {
     // Handle webhook verification challenge
     if (req.body.challenge) {
-      console.log('🔐 Monday.com webhook verification challenge received:', req.body.challenge);
+      Sentry.addBreadcrumb({
+        category: 'webhook.monday',
+        message: 'Monday.com webhook verification challenge received',
+        level: 'info',
+        data: { challenge: req.body.challenge }
+      });
       
       // Return the challenge token as required by Monday.com
       return res.status(200).json({ challenge: req.body.challenge });
@@ -169,9 +174,25 @@ router.post('/monday', async (req, res) => {
         .digest('base64');
 
       if (signature !== expectedSignature) {
-        console.error('Invalid Monday.com webhook signature');
+        Sentry.captureMessage('Invalid Monday.com webhook signature', 'error');
         return res.status(403).json({ error: 'Invalid signature' });
       }
+      
+      Sentry.addBreadcrumb({
+        category: 'webhook.monday',
+        message: 'Monday.com webhook signature verified',
+        level: 'info'
+      });
+    } else {
+      Sentry.addBreadcrumb({
+        category: 'webhook.monday',
+        message: 'Skipping signature verification',
+        level: 'warning',
+        data: { 
+          hasSignature: !!signature,
+          hasSecret: !!process.env.MONDAY_WEBHOOK_SECRET
+        }
+      });
     }
 
     // Start a Sentry span for performance monitoring
@@ -455,11 +476,40 @@ async function processWebhook(req, res, span) {
 
 // Process Monday.com webhooks asynchronously
 async function processMondayWebhookAsync(req, res, span) {
+  Sentry.addBreadcrumb({
+    category: 'webhook.monday',
+    message: 'Starting Monday.com webhook processing',
+    level: 'info'
+  });
+  
   try {
+    Sentry.addBreadcrumb({
+      category: 'webhook.monday',
+      message: 'Calling processMondayWebhook',
+      level: 'info',
+      data: { body: req.body }
+    });
+    
     const result = await processMondayWebhook(req.body);
     
+    Sentry.addBreadcrumb({
+      category: 'webhook.monday',
+      message: 'processMondayWebhook completed',
+      level: 'info',
+      data: { result: result }
+    });
+    
     if (result.success) {
-      console.log(`✅ Successfully processed Monday.com webhook for item ${result.itemId}`);
+      Sentry.addBreadcrumb({
+        category: 'webhook.monday',
+        message: 'Successfully processed Monday.com webhook',
+        level: 'info',
+        data: { 
+          itemId: result.itemId,
+          email: result.email,
+          enrollmentSuccess: result.enrollmentResult.success
+        }
+      });
       
       // Send success notification
       await sendDiscordNotification(
@@ -475,7 +525,16 @@ async function processMondayWebhookAsync(req, res, span) {
         result.enrollmentResult.success ? '57F287' : 'ED4245'
       );
     } else {
-      console.log(`⚠️ Monday.com webhook processing skipped: ${result.reason}`);
+      Sentry.addBreadcrumb({
+        category: 'webhook.monday',
+        message: 'Monday.com webhook processing skipped',
+        level: 'warning',
+        data: { 
+          reason: result.reason,
+          itemId: req.body.itemId || 'Unknown',
+          eventType: req.body.event?.type || 'Unknown'
+        }
+      });
       
       // Send notification for skipped processing
       await sendDiscordNotification(
@@ -493,7 +552,13 @@ async function processMondayWebhookAsync(req, res, span) {
     
     if (span) span.end();
   } catch (error) {
-    console.error('Error processing Monday.com webhook:', error);
+    Sentry.addBreadcrumb({
+      category: 'webhook.monday',
+      message: 'Error processing Monday.com webhook',
+      level: 'error',
+      data: { error: error.message }
+    });
+    
     Sentry.captureException(error, {
       context: 'Monday.com webhook processing'
     });
