@@ -4,7 +4,6 @@ const express = require('express');
 const cors = require('cors');
 const Sentry = require('@sentry/node');
 const { apiKeyAuth } = require('./utils/authMiddleware');
-const { startSpan } = require('./utils/sentry');
 
 // Routes
 const webhookRoutes = require('./routes/webhookRoutes');
@@ -43,6 +42,16 @@ app.get("/debug-sentry", function mainHandler(req, res) {
   }
 });
 
+
+app.get('/sentry-diagnostics', (req, res) => {
+  const client = Sentry.getCurrentHub().getClient();
+  res.json({
+    initialized: !!client,
+    dsnPresent: !!process.env.SENTRY_DSN,
+    environment: process.env.NODE_ENV,
+  });
+});
+
 // Test with the new span-based API
 app.get("/debug-sentry/span", function(req, res) {
   try {
@@ -57,7 +66,7 @@ app.get("/debug-sentry/span", function(req, res) {
     });
     
     // Create a span
-    const span = startSpan({
+    const span = Sentry.startSpanManual({
       name: "test-span",
       op: "test",
       attributes: {
@@ -83,19 +92,19 @@ app.get("/debug-sentry/span", function(req, res) {
     console.error('Error in span test route:', error);
     res.status(500).send('Error in span test route');
   }
-});
+}); 
 
 // Test with performance monitoring using spans
 app.get("/debug-sentry/performance", async function(req, res) {
   try {
     // Create a parent span
-    const parentSpan = startSpan({
+    const parentSpan = Sentry.startSpanManual({
       name: "test-performance",
       op: "test"
     });
     
     // Create a child span
-    const childSpan1 = startSpan({
+    const childSpan1 = Sentry.startSpanManual({
       name: "test-operation-1",
       op: "test.operation"
     });
@@ -107,7 +116,7 @@ app.get("/debug-sentry/performance", async function(req, res) {
     childSpan1.end();
     
     // Create another child span
-    const childSpan2 = startSpan({
+    const childSpan2 = Sentry.startSpanManual({
       name: "test-operation-2",
       op: "test.operation"
     });
