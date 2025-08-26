@@ -10,13 +10,6 @@ if (process.env.SENTRY_DSN) {
     environment: process.env.NODE_ENV || 'development',
     maxBreadcrumbs: 50,
     tracesSampleRate: 1.0,
-    // Remove debug: true for production
-    beforeSend(event) {
-      if (process.env.NODE_ENV === 'development') {
-        console.log('Sentry event:', event);
-      }
-      return event;
-    }
   });
   
   console.log(`✅ Sentry initialized in ${process.env.NODE_ENV || 'development'} environment`);

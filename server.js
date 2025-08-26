@@ -37,6 +37,10 @@ app.use('/api/status', statusRoutes);
 app.use('/', homeRoute);
 app.use('/health', healthRoute);
 
+app.get('test', (req, res) => {
+  res.json({ message: 'Hello World' });
+});
+
 // Add test routes for Sentry
 app.get("/debug-sentry", function mainHandler(req, res) {
   try {
@@ -46,6 +50,8 @@ app.get("/debug-sentry", function mainHandler(req, res) {
     res.status(500).json({ error: 'Error captured with span and sent to Sentry', message: "Check sentry" });
   }
 });
+
+
 
 // Test with the new span-based API
 app.get("/debug-sentry/span", function(req, res) {
