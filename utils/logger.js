@@ -60,6 +60,11 @@ if (process.env.SENTRY_DSN) {
           Sentry.captureMessage(message, 'info');
         }
         
+        // Send all webhook events to Sentry for visibility
+        if (meta.category === 'webhook') {
+          Sentry.captureMessage(`Webhook: ${message}`, 'info');
+        }
+        
         return `${timestamp} ${level}: ${message} ${stack ? `\n${stack}` : ''}`;
       })
     )
