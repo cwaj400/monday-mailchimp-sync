@@ -23,6 +23,7 @@
     "check-mailchimp": "node scripts/check-mailchimp-subscriber.js",
     "setup-webhook": "node scripts/setup-monday-webhook.js",
     "list-webhooks": "node scripts/setup-monday-webhook.js list",
+    "logs": "vercel logs https://monday-mailchimp-sync-angelljames.vercel.app",
     "delete-webhook": "node scripts/setup-monday-webhook.js delete",
     "webhook-details": "node scripts/get-webhook-details.js details",
     "webhook-test": "node scripts/get-webhook-details.js test",

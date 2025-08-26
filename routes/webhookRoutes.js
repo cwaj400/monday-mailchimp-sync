@@ -207,12 +207,18 @@ router.post('/monday', async (req, res) => {
   try {
 
     logger.info('Monday webhook received', {
-      body: req.body,
+      eventType: req.body.event?.type,
+      pulseId: req.body.event?.pulseId,
+      boardId: req.body.event?.boardId,
       route: '/api/webhooks/monday'
     });
 
     // Verification challenge
     if (req.body?.challenge) {
+      logger.info('Monday webhook verification challenge', {
+        challenge: req.body.challenge,
+        route: '/api/webhooks/monday'
+      });
       Sentry.addBreadcrumb({
         category: 'webhook.monday',
         message: 'Verification challenge',
@@ -223,6 +229,12 @@ router.post('/monday', async (req, res) => {
     }
 
     // Signature verification (when configured)
+    logger.info('Checking signature verification', {
+      hasSignature: !!req.headers['x-monday-signature'],
+      hasSecret: !!process.env.MONDAY_WEBHOOK_SECRET,
+      route: '/api/webhooks/monday'
+    });
+    
     const signature = req.headers['x-monday-signature'];
     if (signature && process.env.MONDAY_WEBHOOK_SECRET) {
       const expected = crypto
@@ -231,7 +243,9 @@ router.post('/monday', async (req, res) => {
         .digest('base64');
 
       if (signature !== expected) {
-        logger.error('Invalid Monday.com webhook signature');
+        logger.error('Invalid Monday.com webhook signature', {
+          route: '/api/webhooks/monday'
+        });
         Sentry.captureMessage('Invalid Monday.com webhook signature', 'error');
         return res.status(403).json({ error: 'Invalid signature' });
       }
@@ -251,9 +265,17 @@ router.post('/monday', async (req, res) => {
     }
 
     // Acknowledge fast
+    logger.info('Sending webhook acknowledgment', {
+      route: '/api/webhooks/monday'
+    });
     res.status(200).json({ success: true, message: 'Monday webhook received, processing' });
 
     // Process in background with a parent span
+    logger.info('Creating parent span for processing', {
+      eventType: req.body.event?.type,
+      pulseId: req.body.event?.pulseId,
+      route: '/api/webhooks/monday'
+    });
     const span = Sentry.startInactiveSpan({
       name: `monday_webhook_${req.body.event?.type || 'unknown'}_${req.body.event?.pulseId || 'no_id'}`,
       op: 'webhook.receive',
@@ -265,10 +287,21 @@ router.post('/monday', async (req, res) => {
     });
 
     try {
+      logger.info('About to call processMondayWebhookSpanWrapped', {
+        route: '/api/webhooks/monday'
+      });
       await processMondayWebhookSpanWrapped(req.body, span);
+      logger.info('processMondayWebhookSpanWrapped completed successfully', {
+        route: '/api/webhooks/monday'
+      });
       span.setStatus('ok');
       span.end();
     } catch (error) {
+      logger.error('Error in processMondayWebhookSpanWrapped', {
+        error: error.message,
+        stack: error.stack,
+        route: '/api/webhooks/monday'
+      });
       span.setStatus('error');
       span.end();
       Sentry.captureException(error, {
@@ -289,6 +322,14 @@ router.post('/monday', async (req, res) => {
 });
 
 async function processMondayWebhookSpanWrapped(body, parentSpan) {
+
+  logger.info('Starting processMondayWebhookSpanWrapped', {
+    eventType: body.event?.type,
+    pulseId: body.event?.pulseId,
+    boardId: body.event?.boardId,
+    route: '/api/webhooks/monday',
+  });
+
   Sentry.addBreadcrumb({
     category: 'webhook.monday',
     message: 'Starting processMondayWebhook',
@@ -305,7 +346,21 @@ async function processMondayWebhookSpanWrapped(body, parentSpan) {
     span.setAttribute('function', 'processMondayWebhook');
     span.setAttribute('body', JSON.stringify(body));
     
+    logger.info('Calling processMondayWebhook', {
+      eventType: body.event?.type,
+      pulseId: body.event?.pulseId,
+      route: '/api/webhooks/monday'
+    });
+    
     const result = await processMondayWebhook(body);
+    
+    logger.info('processMondayWebhook completed', {
+      success: result?.success,
+      reason: result?.reason,
+      email: result?.email,
+      itemId: result?.itemId,
+      route: '/api/webhooks/monday'
+    });
     
     span.setStatus('ok');
     span.end();
