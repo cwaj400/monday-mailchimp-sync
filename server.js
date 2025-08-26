@@ -38,11 +38,14 @@ app.get('/test-sentry', (req, res) => {
   res.json({
     sentryType: typeof Sentry,
     sentryKeys: Object.keys(Sentry || {}),
-    hasGetCurrentHub: typeof Sentry.getCurrentHub === 'function',
+    hasGetClient: typeof Sentry.getClient === 'function',
+    hasIsInitialized: typeof Sentry.isInitialized === 'function',
     hasInit: typeof Sentry.init === 'function',
     hasCaptureException: typeof Sentry.captureException === 'function',
+    hasStartSpan: typeof Sentry.startSpan === 'function',
     dsnPresent: !!process.env.SENTRY_DSN,
     environment: process.env.NODE_ENV,
+    sdkVersion: Sentry.SDK_VERSION,
   });
 });
 
@@ -58,28 +61,21 @@ app.get("/debug-sentry", function mainHandler(req, res) {
 
 app.get('/sentry-diagnostics', (req, res) => {
   try {
-    // Check if Sentry is properly initialized
-    if (typeof Sentry.getCurrentHub !== 'function') {
-      return res.json({
-        initialized: false,
-        dsnPresent: !!process.env.SENTRY_DSN,
-        error: 'Sentry not properly initialized - getCurrentHub is not available',
-        environment: process.env.NODE_ENV,
-        sentryType: typeof Sentry,
-        sentryKeys: Object.keys(Sentry || {}),
-      });
-    }
-
-    const hub = Sentry.getCurrentHub();
-    const client = hub.getClient();
-    const options = client ? client.getOptions?.() : {};
-
+    // Use the new Sentry v9 API
+    const client = Sentry.getClient();
+    const isInitialized = Sentry.isInitialized();
+    
     res.json({
-      initialized: !!client,
+      initialized: isInitialized,
       dsnPresent: !!process.env.SENTRY_DSN,
-      dsnFromClient: options?.dsn || null,
-      environment: options?.environment || process.env.NODE_ENV,
-      release: options?.release || null,
+      environment: process.env.NODE_ENV,
+      hasClient: !!client,
+      clientOptions: client ? {
+        dsn: client.getOptions?.()?.dsn || null,
+        environment: client.getOptions?.()?.environment || null,
+        release: client.getOptions?.()?.release || null,
+      } : null,
+      sentryVersion: Sentry.SDK_VERSION,
     });
   } catch (error) {
     res.json({
