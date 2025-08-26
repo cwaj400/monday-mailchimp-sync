@@ -11,13 +11,8 @@ if (process.env.SENTRY_DSN) {
   Sentry.init({
     dsn: process.env.SENTRY_DSN,
     environment: process.env.NODE_ENV || 'development',
-    integrations: [
-      // Capture console.error() calls as Sentry events
-      new CaptureConsole({
-        levels: ['error']
-      })
-    ],
-    // Set tracesSampleRate to 1.0 to capture 100% of transactions for performance monitoring
+    maxBreadcrumbs: 50,
+    debug: true,
     tracesSampleRate: 1.0,
   });
   

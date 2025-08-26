@@ -9,6 +9,7 @@ const { handleEmailOpen } = require('./webhookHandlers/handleEmailOpen.js');
 const { handleEmailClick } = require('./webhookHandlers/handleEmailClick.js');
 const { captureException, addBreadcrumb, startSpanManual, Sentry } = require('../utils/sentry');
 const { processMondayWebhook } = require('../utils/mondayService');
+const { logger, logHelpers } = require('../utils/logger');
 
 const dotenv = require('dotenv');
 dotenv.config();
@@ -48,6 +49,13 @@ router.post('/mailchimp', async (req, res) => {
       forceTransaction: true
     });
     
+    // Log webhook received
+    logHelpers.webhook('received', {
+      type: req.body.type || 'unknown',
+      hasMandrill: !!req.body.mandrill_events,
+      endpoint: '/api/webhooks/mailchimp'
+    });
+    
     // Add breadcrumb for webhook received
     addBreadcrumb(
       'Mailchimp webhook received',
@@ -60,7 +68,7 @@ router.post('/mailchimp', async (req, res) => {
     
     // Force a test event to Sentry for debugging
     if (req.body.type === 'test') {
-      console.log('🔍 Sending test event to Sentry for debugging...');
+      logger.info('🔍 Sending test event to Sentry for debugging...');
       
       // Send multiple types of events to test Sentry
       captureException(new Error('Test webhook event for Sentry debugging'), {
@@ -84,7 +92,11 @@ router.post('/mailchimp', async (req, res) => {
 
     // Process the webhook asynchronously
     processWebhook(req, res, span).catch(error => {
-      console.error('Error in background processing:', error);
+      logHelpers.error('Error in background webhook processing', error, {
+        webhookType: req.body.type || 'unknown',
+        hasMandrill: !!req.body.mandrill_events
+      });
+      
       captureException(error, {
         context: 'Background webhook processing',
         webhookType: req.body.type || 'unknown',
@@ -103,7 +115,11 @@ router.post('/mailchimp', async (req, res) => {
       }
     });
   } catch (error) {
-    console.error('Error in webhook endpoint:', error);
+    logHelpers.error('Error in webhook endpoint', error, {
+      endpoint: '/api/webhooks/mailchimp',
+      body: req.body
+    });
+    
     captureException(error, {
       context: 'Webhook endpoint',
       body: req.body
@@ -133,8 +149,9 @@ router.post('/monday', async (req, res) => {
   try {
     // Handle webhook verification challenge
     if (req.body.challenge) {
-      console.log('🔐 Monday.com webhook verification challenge received');
-      console.log('Challenge token:', req.body.challenge);
+      logger.info('🔐 Monday.com webhook verification challenge received', {
+        challenge: req.body.challenge
+      });
       
       // Return the challenge token as required by Monday.com
       return res.status(200).json({ challenge: req.body.challenge });
@@ -160,6 +177,14 @@ router.post('/monday', async (req, res) => {
       name: 'monday_webhook',
       op: 'webhook.receive',
       forceTransaction: true
+    });
+    
+    // Log webhook received
+    logHelpers.webhook('received', {
+      type: req.body.type || 'unknown',
+      eventType: req.body.event?.type || 'unknown',
+      itemId: req.body.itemId || 'unknown',
+      endpoint: '/api/webhooks/monday'
     });
     
     // Add breadcrumb for webhook received
