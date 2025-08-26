@@ -24,13 +24,6 @@ router.get('/find-by-email', async (req, res) => {
     // Force a test Sentry event to verify it's working
     Sentry.captureMessage('TEST: Monday.com find-by-email endpoint called', 'info');
     
-    // Start Sentry span for performance monitoring
-    span = Sentry.startSpan({
-      name: 'monday_find_by_email',
-      op: 'api.monday.find',
-      attributes: { email: req.query.email }
-    });
-    
     const email = req.query.email;
     
     // Add breadcrumb for request
@@ -43,32 +36,46 @@ router.get('/find-by-email', async (req, res) => {
       return res.status(400).json({ error: 'Email parameter is required' });
     }
     
-    const item = await findMondayItemByEmail(email);
-    
-    if (item) {
-      // Add breadcrumb for success
-      addBreadcrumb('Monday.com item found', 'api.monday', {
-        email,
-        itemId: item.id,
-        itemName: item.name
-      });
+    const result = await Sentry.startSpan({
+      name: 'monday_find_by_email',
+      op: 'api.monday.find',
+      attributes: { email: email }
+    }, async () => {
+      const item = await findMondayItemByEmail(email);
       
-      return res.json({
-        success: true,
-        item: {
-          id: item.id,
-          name: item.name
-        }
-      });
+      if (item) {
+        // Add breadcrumb for success
+        addBreadcrumb('Monday.com item found', 'api.monday', {
+          email,
+          itemId: item.id,
+          itemName: item.name
+        });
+        
+        return {
+          success: true,
+          item: {
+            id: item.id,
+            name: item.name
+          }
+        };
+      } else {
+        // Add breadcrumb for not found
+        addBreadcrumb('Monday.com item not found', 'api.monday', {
+          email
+        });
+        
+        return {
+          success: false,
+          message: `No item found with email: ${email}`
+        };
+      }
+    });
+    
+    // Return the result from the span
+    if (result.success) {
+      return res.json(result);
     } else {
-      // Add breadcrumb for not found
-      addBreadcrumb('Monday.com item not found', 'api.monday', {
-        email
-      });
-      return res.status(404).json({
-        success: false,
-        message: `No item found with email: ${email}`
-      });
+      return res.status(404).json(result);
     }
   } catch (error) {
     // Log error to Sentry
@@ -86,16 +93,7 @@ router.get('/find-by-email', async (req, res) => {
 });
 
 router.get('/all-x-contacts', async (req, res) => {
-  let span = null;
-  
   try {
-    // Start Sentry span for performance monitoring
-    span = Sentry.startSpan({
-      name: 'monday_get_contacts',
-      op: 'api.monday.contacts',
-      attributes: { quantity: req.query.quantity }
-    });
-    
     const x = req.query.quantity;
     
     // Add breadcrumb for request
@@ -104,12 +102,20 @@ router.get('/all-x-contacts', async (req, res) => {
       endpoint: '/api/monday/all-x-contacts'
     });
     
-    const contacts = await getAllMondayContacts(x);
-    
-    // Add breadcrumb for success
-    addBreadcrumb('Monday.com contacts retrieved', 'api.monday', {
-      quantity: x,
-      contactCount: contacts.length || 0
+    const contacts = await Sentry.startSpan({
+      name: 'monday_get_contacts',
+      op: 'api.monday.contacts',
+      attributes: { quantity: x }
+    }, async () => {
+      const contacts = await getAllMondayContacts(x);
+      
+      // Add breadcrumb for success
+      addBreadcrumb('Monday.com contacts retrieved', 'api.monday', {
+        quantity: x,
+        contactCount: contacts.length || 0
+      });
+      
+      return contacts;
     });
     
     res.json(contacts);

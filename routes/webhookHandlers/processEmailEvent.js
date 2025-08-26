@@ -17,7 +17,7 @@ exports.processEmailEvent = async function(email, eventType, eventData) {
 
     try {
       // Start Sentry span for performance monitoring
-      span = Sentry.startSpan({
+      span = Sentry.startInactiveSpan({
         name: 'process_email_event',
         op: 'webhook.email.process',
         attributes: {

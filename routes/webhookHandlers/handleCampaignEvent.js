@@ -20,7 +20,7 @@ exports.handleCampaignEvent = async function(req, res) {
     
     try {
       // Start a Sentry span (no callback in v9.x)
-      span = Sentry.startSpan({
+      span = Sentry.startInactiveSpan({
         name: 'handleCampaignEvent',
         op: 'webhook.campaign',
         attributes: {
@@ -147,7 +147,7 @@ exports.handleCampaignEvent = async function(req, res) {
       });
       
       // Create a child span for recipients API request
-      const recipientsSpan = span ? Sentry.startSpan({
+              const recipientsSpan = span ? Sentry.startInactiveSpan({
         name: 'fetch_campaign_recipients',
         op: 'http.client',
         attributes: { campaignId }
@@ -181,7 +181,7 @@ exports.handleCampaignEvent = async function(req, res) {
       });
       
       // Create a child span for processing recipients
-      const processingSpan = span ? Sentry.startSpan({
+              const processingSpan = span ? Sentry.startInactiveSpan({
         name: 'process_recipients',
         op: 'task',
         attributes: { 

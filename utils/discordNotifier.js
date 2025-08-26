@@ -22,8 +22,9 @@ async function sendDiscordNotification(title, message, fields = {}, color = '344
     color: color
   });
 
-  console.log('About to send Discord notification');
-  console.log('Sending Discord notification to:', webhookUrl);
+  logger.info('Sending Discord notification to:', {
+    webhookUrl: webhookUrl
+  });
   if (!webhookUrl) {
     return false;
   }
@@ -35,7 +36,7 @@ async function sendDiscordNotification(title, message, fields = {}, color = '344
       value: String(value),
       inline: true
     }));
-    console.log('Fields:', embedFields);
+    logger.info('Fields:', embedFields);
 
     // Create the payload
     const payload = {

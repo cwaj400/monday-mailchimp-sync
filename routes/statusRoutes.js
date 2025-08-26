@@ -30,71 +30,86 @@ const getAudienceId = () => {
 
 // Check Mailchimp connection status
 router.get('/mailchimp', async (req, res) => {
-  let span = null;
-  
   try {
-    // Start Sentry span for performance monitoring
-    span = Sentry.startSpan({
+    // Add breadcrumb for request
+    Sentry.addBreadcrumb({
+      category: 'api.status',
+      message: 'Mailchimp status check request',
+      data: {
+        endpoint: '/api/status/mailchimp'
+      }
+    });
+    
+    const mailchimpResult = await Sentry.startSpan({
       name: 'status_mailchimp_check',
       op: 'api.status.mailchimp',
       attributes: {
         endpoint: '/api/status/mailchimp'
       }
-    });
-    
-    // Add breadcrumb for request
-    addBreadcrumb('Mailchimp status check request', 'api.status', {
-      endpoint: '/api/status/mailchimp'
-    });
-    
-    // Test the connection by getting account info
-    const response = await mailchimp.ping.get();
-    
-    if (response && response.health_status === "Everything's Chimpy!") {
-      // Get current audience info
-      const audienceId = getAudienceId();
-      let currentAudience = null;
-      let subscriberCount = 0;
+    }, async () => {
+      // Test the connection by getting account info
+      const response = await mailchimp.ping.get();
       
-      if (audienceId) {
-        try {
-          currentAudience = await mailchimp.lists.getList(audienceId);
-          subscriberCount = currentAudience.stats.member_count;
-          
-          // Add breadcrumb for success
-          addBreadcrumb('Mailchimp status check successful', 'api.status', {
-            audienceId,
-            subscriberCount
-          });
-        } catch (err) {
-          console.warn(`Could not fetch audience with ID ${audienceId}:`, err.message);
-          
-          // Add breadcrumb for warning
-          addBreadcrumb('Mailchimp audience fetch warning', 'api.status', {
-            audienceId,
-            error: err.message
-          });
+      if (response && response.health_status === "Everything's Chimpy!") {
+        // Get current audience info
+        const audienceId = getAudienceId();
+        let currentAudience = null;
+        let subscriberCount = 0;
+        
+        if (audienceId) {
+          try {
+            currentAudience = await mailchimp.lists.getList(audienceId);
+            subscriberCount = currentAudience.stats.member_count;
+            
+            // Add breadcrumb for success
+            Sentry.addBreadcrumb({
+              category: 'api.status',
+              message: 'Mailchimp status check successful',
+              data: {
+                audienceId,
+                subscriberCount
+              }
+            });
+          } catch (err) {
+            console.warn(`Could not fetch audience with ID ${audienceId}:`, err.message);
+            
+            // Add breadcrumb for warning
+            Sentry.addBreadcrumb({
+              category: 'api.status',
+              message: 'Mailchimp audience fetch warning',
+              data: {
+                audienceId,
+                error: err.message
+              }
+            });
+          }
         }
+        
+        return {
+          connected: true,
+          environment: process.env.NODE_ENV || 'development',
+          currentAudience: currentAudience ? {
+            memberCount: subscriberCount
+          } : null
+        };
+      } else {
+        // Add breadcrumb for failure
+        Sentry.addBreadcrumb({
+          category: 'api.status',
+          message: 'Mailchimp status check failed',
+          data: {
+            healthStatus: response?.health_status
+          }
+        });
+        
+        return {
+          connected: false,
+          message: "Mailchimp API is not responding correctly"
+        };
       }
-      
-      res.json({
-        connected: true,
-        environment: process.env.NODE_ENV || 'development',
-        currentAudience: currentAudience ? {
-          memberCount: subscriberCount
-        } : null
-      });
-    } else {
-      // Add breadcrumb for failure
-      addBreadcrumb('Mailchimp status check failed', 'api.status', {
-        healthStatus: response?.health_status
-      });
-      
-      res.json({
-        connected: false,
-        message: "Mailchimp API is not responding correctly"
-      });
-    }
+    });
+    
+    res.json(mailchimpResult);
   } catch (error) {
     // Log error to Sentry
     Sentry.captureException(error, {
@@ -112,23 +127,14 @@ router.get('/mailchimp', async (req, res) => {
 
 // Check Monday.com connection status
 router.get('/monday', async (req, res) => {
-  let span = null;
-  
   try {
-    // Start Sentry span for performance monitoring
-    span = Sentry.startInactiveSpan({
-      name: 'status_monday_check',
-      op: 'api.status.monday',
-      attributes: {
+    // Add breadcrumb for request
+    Sentry.addBreadcrumb({
+      category: 'api.status',
+      message: 'Monday.com status check request',
+      data: {
         endpoint: '/api/status/monday'
       }
-    });
-    span.setStatus('ok');
-    
-    
-    // Add breadcrumb for request
-    addBreadcrumb('Monday.com status check request', 'api.status', {
-      endpoint: '/api/status/monday'
     });
     
     // Simple query to test the connection
@@ -141,30 +147,48 @@ router.get('/monday', async (req, res) => {
       }
     `;
     
-    const result = await executeQuery(query);
-
+    const mondayResult = await Sentry.startSpan({
+      name: 'status_monday_check',
+      op: 'api.status.monday',
+      attributes: {
+        endpoint: '/api/status/monday'
+      }
+    }, async () => {
+      const result = await executeQuery(query);
+      
+      if (result.data && result.data.me) {
+        // Add breadcrumb for success
+        Sentry.addBreadcrumb({
+          category: 'api.status',
+          message: 'Monday.com status check successful',
+          data: {
+            userId: result.data.me.id,
+            userName: result.data.me.name
+          }
+        });
+        
+        return {
+          connected: true,
+          user: result.data.me
+        };
+      } else {
+        // Add breadcrumb for failure
+        Sentry.addBreadcrumb({
+          category: 'api.status',
+          message: 'Monday.com status check failed',
+          data: {
+            result: result
+          }
+        });
+        
+        return {
+          connected: false,
+          message: 'Could not retrieve user information'
+        };
+      }
+    });
     
-    if (result.data && result.data.me) {
-      // Add breadcrumb for success
-      addBreadcrumb('Monday.com status check successful', 'api.status', {
-        userId: result.data.me.id,
-        userName: result.data.me.name
-      });
-      
-      res.json({
-        connected: true,
-      });
-    } else {
-      // Add breadcrumb for failure
-      addBreadcrumb('Monday.com status check failed', 'api.status', {
-        result: result
-      });
-      
-      res.json({
-        connected: false,
-        message: 'Could not retrieve user information'
-      });
-    }
+    res.json(mondayResult);
   } catch (error) {
     // Log error to Sentry
     Sentry.captureException(error, {

@@ -375,6 +375,13 @@ async function processMondayWebhookSpanWrapped(body, parentSpan) {
     });
 
     if (result?.success) {
+      logger.info('Sending Discord notification for successful enrollment', {
+        email: result.email,
+        itemId: result.itemId,
+        enrollmentResult: result.enrollmentResult,
+        route: '/api/webhooks/monday'
+      });
+      
       await sendDiscordNotification(
         '🎯 Monday.com Inquiry Processed',
         'Successfully processed new inquiry from Monday.com.',

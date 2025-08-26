@@ -834,6 +834,7 @@ function validateAndCleanEmail(email) {
  * @returns {Promise<Object>} - Result of processing
  */
 async function processMondayWebhook(webhookData) {
+  
   logger.info('processMondayWebhook called', {
     webhookData: webhookData,
     endpoint: '/api/monday/process-webhook'
@@ -842,7 +843,7 @@ async function processMondayWebhook(webhookData) {
   const event = webhookData.event;
   
   // Create a Sentry span for the entire webhook processing
-  const span = Sentry.startSpan({
+  const span = Sentry.startInactiveSpan({
     name: `monday_webhook_${event?.type || 'unknown'}_${event?.pulseId || 'no_id'}`,
     op: 'webhook.monday.process',
   });
@@ -948,7 +949,7 @@ async function processMondayWebhook(webhookData) {
     });
     
     // Extract email from the item
-    const emailSpan = Sentry.startSpan({
+    const emailSpan = Sentry.startInactiveSpan({
       name: `extract_email_item_${actualItemId}`,
       op: 'email.extraction',
     });
@@ -991,7 +992,7 @@ async function processMondayWebhook(webhookData) {
     });
     
     // Enroll in Mailchimp campaign
-    const enrollmentSpan = Sentry.startSpan({
+    const enrollmentSpan = Sentry.startInactiveSpan({
       name: `mailchimp_enrollment_${email}`,
       op: 'mailchimp.enrollment',
     });
