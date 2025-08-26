@@ -41,11 +41,20 @@ router.post('/mailchimp', async (req, res) => {
   let span = null;
   
   try {
-    // Basic request validation
+    // Handle webhook verification requests
     if (!req.body || Object.keys(req.body).length === 0) {
-      return res.status(400).json({ 
-        success: false, 
-        error: 'Empty request body' 
+      console.log('Empty webhook body received - likely verification request');
+      
+      // Add breadcrumb for verification request
+      addBreadcrumb('Webhook verification request', 'webhook', {
+        endpoint: '/api/webhooks/mailchimp',
+        headers: Object.keys(req.headers)
+      });
+      
+      // Return success for verification requests
+      return res.status(200).json({ 
+        success: true, 
+        message: 'Webhook endpoint verified' 
       });
     }
     
@@ -62,7 +71,9 @@ router.post('/mailchimp', async (req, res) => {
       'webhook',
       {
         type: req.body.type || 'unknown',
-        hasMandrill: !!req.body.mandrill_events
+        hasMandrill: !!req.body.mandrill_events,
+        bodyKeys: Object.keys(req.body),
+        headers: Object.keys(req.headers).filter(h => h.toLowerCase().includes('mailchimp') || h.toLowerCase().includes('webhook'))
       }
     );
     
@@ -379,10 +390,33 @@ async function processWebhook(req, res, span) {
         }
       }
     } else {
+      // Handle webhooks without a type field
       console.log('No Type Given in webhook:', req.body);
-      addBreadcrumb('No Type Given in webhook', 'webhook', { 
-        body: JSON.stringify(req.body).substring(0, 200) + '...' 
-      }, 'warning');
+      
+      // Check if this is a webhook verification request
+      if (req.body && Object.keys(req.body).length === 0) {
+        addBreadcrumb('Empty webhook body received', 'webhook', { 
+          endpoint: '/api/webhooks/mailchimp',
+          headers: Object.keys(req.headers)
+        }, 'info');
+        
+        // This might be a webhook verification request
+        Sentry.captureMessage('Empty webhook body received - possible verification request', 'info');
+      } else if (req.body && req.body.type === undefined) {
+        addBreadcrumb('Webhook without type field', 'webhook', { 
+          body: JSON.stringify(req.body).substring(0, 200) + '...',
+          bodyKeys: Object.keys(req.body)
+        }, 'warning');
+        
+        // Log this as a warning for investigation
+        Sentry.captureMessage('Webhook received without type field', 'warning');
+      } else {
+        addBreadcrumb('Unknown webhook format', 'webhook', { 
+          body: JSON.stringify(req.body).substring(0, 200) + '...',
+          hasBody: !!req.body,
+          bodyType: typeof req.body
+        }, 'warning');
+      }
     }
     
     // Finish the span
@@ -393,7 +427,7 @@ async function processWebhook(req, res, span) {
     console.error('Error processing webhook:', error);
     
     // Capture the exception with context
-    captureException(error, {
+    Sentry.captureException(error, {
       context: 'Webhook processing',
       webhookType: req.body?.type || 'unknown',
       hasMandrill: !!req.body?.mandrill_events
@@ -460,7 +494,7 @@ async function processMondayWebhookAsync(req, res, span) {
     if (span) span.end();
   } catch (error) {
     console.error('Error processing Monday.com webhook:', error);
-    captureException(error, {
+    Sentry.captureException(error, {
       context: 'Monday.com webhook processing'
     });
     
