@@ -176,7 +176,7 @@ router.post('/monday', async (req, res) => {
 
     // Start a Sentry span for performance monitoring
     span = startSpanManual({
-      name: 'monday_webhook',
+      name: `monday_webhook_${req.body.event?.type || 'unknown'}_${req.body.event?.pulseId || 'no_id'}`,
       op: 'webhook.receive',
       forceTransaction: true
     });
