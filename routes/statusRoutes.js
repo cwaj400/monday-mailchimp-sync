@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const mailchimp = require('@mailchimp/mailchimp_marketing');
 const { executeQuery } = require('../utils/mondayClient');
+const { addBreadcrumb, startSpanManual, Sentry } = require('../utils/sentry');
 
 // Configure the Mailchimp client
 mailchimp.setConfig({
@@ -29,7 +30,21 @@ const getAudienceId = () => {
 
 // Check Mailchimp connection status
 router.get('/mailchimp', async (req, res) => {
+  let span = null;
+  
   try {
+    // Start Sentry span for performance monitoring
+    span = startSpanManual({
+      name: 'status_mailchimp_check',
+      op: 'api.status.mailchimp',
+      forceTransaction: true
+    });
+    
+    // Add breadcrumb for request
+    addBreadcrumb('Mailchimp status check request', 'api.status', {
+      endpoint: '/api/status/mailchimp'
+    });
+    
     // Test the connection by getting account info
     const response = await mailchimp.ping.get();
     
@@ -43,8 +58,20 @@ router.get('/mailchimp', async (req, res) => {
         try {
           currentAudience = await mailchimp.lists.getList(audienceId);
           subscriberCount = currentAudience.stats.member_count;
+          
+          // Add breadcrumb for success
+          addBreadcrumb('Mailchimp status check successful', 'api.status', {
+            audienceId,
+            subscriberCount
+          });
         } catch (err) {
           console.warn(`Could not fetch audience with ID ${audienceId}:`, err.message);
+          
+          // Add breadcrumb for warning
+          addBreadcrumb('Mailchimp audience fetch warning', 'api.status', {
+            audienceId,
+            error: err.message
+          });
         }
       }
       
@@ -56,23 +83,52 @@ router.get('/mailchimp', async (req, res) => {
         } : null
       });
     } else {
+      // Add breadcrumb for failure
+      addBreadcrumb('Mailchimp status check failed', 'api.status', {
+        healthStatus: response?.health_status
+      });
+      
       res.json({
         connected: false,
         message: "Mailchimp API is not responding correctly"
       });
     }
   } catch (error) {
+    // Log error to Sentry
+    Sentry.captureException(error, {
+      context: 'Mailchimp status check',
+      endpoint: '/api/status/mailchimp'
+    });
+    
     console.error('Mailchimp connection error:', error.message);
     res.json({
       connected: false,
       message: error.response?.data?.detail || error.message
     });
+  } finally {
+    if (span) {
+      span.end();
+    }
   }
 });
 
 // Check Monday.com connection status
 router.get('/monday', async (req, res) => {
+  let span = null;
+  
   try {
+    // Start Sentry span for performance monitoring
+    span = startSpanManual({
+      name: 'status_monday_check',
+      op: 'api.status.monday',
+      forceTransaction: true
+    });
+    
+    // Add breadcrumb for request
+    addBreadcrumb('Monday.com status check request', 'api.status', {
+      endpoint: '/api/status/monday'
+    });
+    
     // Simple query to test the connection
     const query = `
       query {
@@ -86,21 +142,42 @@ router.get('/monday', async (req, res) => {
     const result = await executeQuery(query);
     
     if (result.data && result.data.me) {
+      // Add breadcrumb for success
+      addBreadcrumb('Monday.com status check successful', 'api.status', {
+        userId: result.data.me.id,
+        userName: result.data.me.name
+      });
+      
       res.json({
         connected: true,
       });
     } else {
+      // Add breadcrumb for failure
+      addBreadcrumb('Monday.com status check failed', 'api.status', {
+        result: result
+      });
+      
       res.json({
         connected: false,
         message: 'Could not retrieve user information'
       });
     }
   } catch (error) {
+    // Log error to Sentry
+    Sentry.captureException(error, {
+      context: 'Monday.com status check',
+      endpoint: '/api/status/monday'
+    });
+    
     console.error('Monday.com connection error:', error);
     res.json({
       connected: false,
       message: error.response?.data?.error_message || error.message
     });
+  } finally {
+    if (span) {
+      span.end();
+    }
   }
 });
 

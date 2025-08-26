@@ -1,7 +1,7 @@
 const { processEmailEvent } = require('./processEmailEvent');
 const dotenv = require('dotenv');
 const Sentry = require('@sentry/node');
-const { startSpanManual, addBreadcrumb, captureException } = require('../../utils/sentry');
+const { startSpanManual, addBreadcrumb } = require('../../utils/sentry');
 
 dotenv.config();
 
@@ -54,7 +54,7 @@ exports.handleEmailSend = async function(event, res) {
       return res.json(result);
     } catch (error) {
       // Capture error with campaign context
-      captureException(error, {
+      Sentry.captureException(error, {
         context: 'Email send processing',
         campaignId,
         subject,

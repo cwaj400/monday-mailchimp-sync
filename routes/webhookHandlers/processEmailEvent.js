@@ -1,14 +1,33 @@
 const { findMondayItemByEmail, incrementTouchpoints, addNoteToMondayItem } = require('../../utils/mondayService');
 const { sendDiscordNotification } = require('../../utils/discordNotifier');
+const { addBreadcrumb, startSpanManual, Sentry } = require('../../utils/sentry');
 const dotenv = require('dotenv');
 
 dotenv.config();
 
 // Common processing logic
 exports.processEmailEvent = async function(email, eventType, eventData) {
-    console.log('processEmailEvent');
-    // Find the Monday.com item by email
-    const mondayItem = await findMondayItemByEmail(email);
+    let span = null;
+    
+    try {
+      // Start Sentry span for performance monitoring
+      span = startSpanManual({
+        name: 'process_email_event',
+        op: 'webhook.email.process',
+        forceTransaction: true
+      });
+      
+      console.log('processEmailEvent');
+      
+      // Add breadcrumb for email event processing
+      addBreadcrumb('Processing email event', 'webhook.email', {
+        email,
+        eventType,
+        campaignTitle: eventData.campaignTitle
+      });
+      
+      // Find the Monday.com item by email
+      const mondayItem = await findMondayItemByEmail(email);
     
     if (!mondayItem) {
       const errorMsg = `Monday.com item not found for email: ${email}`;
@@ -103,14 +122,35 @@ exports.processEmailEvent = async function(email, eventType, eventData) {
       );
     }
   }
-  return {
-    success: touchpointResult.success && noteResult.success,
-    message: touchpointResult.success ? 
-      `Touchpoints incremented and note added for ${email}` : 
-      `Failed to update touchpoints for ${email}`,
-    itemId: mondayItem.id,
-    noteAdded: noteResult.success,
-    event: eventType,
-    campaign: eventData.campaignTitle
-  };
-}
+      return {
+        success: touchpointResult.success && noteResult.success,
+        message: touchpointResult.success ? 
+          `Touchpoints incremented and note added for ${email}` : 
+          `Failed to update touchpoints for ${email}`,
+        itemId: mondayItem.id,
+        noteAdded: noteResult.success,
+        event: eventType,
+        campaign: eventData.campaignTitle
+      };
+    } catch (error) {
+      // Log error to Sentry
+      Sentry.captureException(error, {
+        context: 'Email event processing',
+        email,
+        eventType,
+        campaignTitle: eventData.campaignTitle
+      });
+      
+      console.error('Error processing email event:', error);
+      return {
+        success: false,
+        error: error.message,
+        email,
+        eventType
+      };
+    } finally {
+      if (span) {
+        span.end();
+      }
+    }
+  }
