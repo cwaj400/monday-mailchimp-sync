@@ -16,5 +16,3 @@ if (process.env.SENTRY_DSN) {
 } else {
   console.warn('⚠️ SENTRY_DSN not found - Sentry will not be initialized');
 }
-
-module.exports = Sentry;
