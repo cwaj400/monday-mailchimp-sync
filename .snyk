@@ -1,4 +1,8 @@
 # Snyk (https://snyk.io) policy file
 version: v1.25.0
-ignore: {}
+ignore:
+  'SNYK-JS-UNDICI-8641354':
+    - '* > vercel > @vercel/node > undici':
+        reason: 'Vercel dependency issue - will be fixed in future Vercel updates'
+        expires: 2025-04-07T00:00:00.000Z
 patch: {} 
