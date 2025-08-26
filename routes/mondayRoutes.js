@@ -11,6 +11,17 @@ router.get('/', (req, res) => {
   });
 });
 
+
+router.get('/test', (req, res) => {
+  Sentry.captureMessage('TEST: Monday.com test endpoint called', 'info');
+  logger.info('Monday.com test endpoint called', {
+    endpoint: '/api/monday/test'
+  });
+  res.json({
+    message: 'OK'
+  });
+});
+
 router.get('/find-by-email', async (req, res) => {
   let span = null;
   
