@@ -213,13 +213,6 @@ app.get('/debug-sentry/manual-span', async (req, res) => {
 // IMPORTANT: add the Sentry error handler AFTER routes, BEFORE your own handler
 Sentry.setupExpressErrorHandler(app);
 
-// Optional fallthrough error handler
-app.use(function onError(err, req, res, next) {
-  // The error id is attached to `res.sentry` to be returned
-  // and optionally displayed to the user for support.
-  res.statusCode = 500;
-  res.json({ error: 'Internal server error' + "\n", message: "Check sentry" });
-});
 
 const PORT = process.env.PORT || 4040;
 app.listen(PORT, () => {

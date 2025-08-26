@@ -1,8 +1,10 @@
 const express = require('express');
 const router = express.Router();
+const {logger} = require('../utils/logger');
+const Sentry = require('@sentry/node');
 
 router.get('/', (req, res) => {
-    console.log('Home route accessed');
+    logger.info('Home route accessed');
   // Detect environment
   let environment = process.env.NODE_ENV || 'development';
   
