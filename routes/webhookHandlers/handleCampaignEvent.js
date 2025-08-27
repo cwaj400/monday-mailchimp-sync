@@ -98,8 +98,9 @@ exports.handleCampaignEvent = async function(req, res) {
         status: status,
         subject: subject,
       });      
-      
+
       if (!MAILCHIMP_API_KEY || !MAILCHIMP_SERVER_PREFIX) {
+        Sentry.captureException(new Error('Mailchimp API key not configured correctly'));
         throw new Error('Mailchimp API key not configured correctly');
       }
       

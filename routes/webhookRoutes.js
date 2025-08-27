@@ -79,6 +79,12 @@ router.post('/mailchimp', async (req, res) => {
         return;
       }
 
+      Sentry.captureMessage('Processing Mailchimp webhiik', {
+        extra: {
+          type: req.body.type,
+          mandrillEvent: req.body.mandrill_events,
+        }
+      });
       await processMailchimpWebhook(req, span);
       span.setStatus('ok');
       span.end();
@@ -163,7 +169,6 @@ async function processMailchimpWebhook(req, span) {
 
   // Regular Mailchimp campaign/lists webhooks
   if (req.body.type) {
-
 
         switch (req.body.type) {
           case 'subscribe':
