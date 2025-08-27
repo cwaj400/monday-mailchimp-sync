@@ -68,7 +68,14 @@ exports.handleCampaignEvent = async function(req, res) {
           });
           span.end();
         }
-        captureException(error, {
+        Sentry.captureException(error, {
+          extra: {
+            campaignId: campaignId,
+            status: status,
+            subject: subject,
+            error: error.message
+          },
+          level: 'error',
           context: 'handleCampaignEvent'
         });
 
@@ -86,8 +93,11 @@ exports.handleCampaignEvent = async function(req, res) {
         }
       });
       
-      console.log(`Campaign ${campaignId} status: ${status}, subject: ${subject}`);
-      
+      logger.info('Campaign event received', {
+        campaignId: campaignId,
+        status: status,
+        subject: subject,
+      });      
       if (!MAILCHIMP_API_KEY || !MAILCHIMP_SERVER_PREFIX) {
         throw new Error('Mailchimp API key not configured correctly');
       }
@@ -307,7 +317,7 @@ exports.handleCampaignEvent = async function(req, res) {
           console.error(`Error processing ${email}:`, error.message);
           
           // Capture exception for individual recipient
-          captureException(error, {
+          Sentry.captureException(error, {
             email,
             campaignId,
             campaignTitle,
@@ -363,11 +373,13 @@ exports.handleCampaignEvent = async function(req, res) {
       console.error('Error processing campaign:', error);
       
       // Capture the exception with context
-      captureException(error, {
+      Sentry.captureException(error, {
         context: 'Campaign processing',
+        extra: {
         campaignId: campaignId,
         status: status,
         subject: subject
+      }
       });
       
       // Send error notification

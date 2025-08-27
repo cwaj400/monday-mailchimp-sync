@@ -47,13 +47,7 @@ async function enrollInMailchimpCampaign(email, itemDetails) {
     // Step 3: Add subscriber to Mailchimp audience
     const subscriberResult = await addSubscriberToAudience(cleanEmail, mergeFields);
     
-    // Step 4: Add enrollment tag
-    await addEnrollmentTag(cleanEmail);
-    
-    // Step 5: Add note to Monday.com item
-    //await addEnrollmentNoteToMonday(itemDetails.id, cleanEmail, subscriberResult);
-    
-    // Step 6: Send Discord notification
+    // Step 4: Send Discord notification
     await sendEnrollmentNotification(cleanEmail, itemDetails, subscriberResult, startTime);
     
     logger.info('Mailchimp enrollment completed', {
@@ -216,9 +210,10 @@ function extractMergeFields(itemDetails) {
       }
     }
   });
-  
-  // Add source tracking
-  mergeFields['SOURCE'] = 'Monday.com Inquiry';
+  logger.info('Extracted merge fields', {
+    mergeFields: mergeFields,
+    function: 'extractMergeFields'
+  });
   
   return mergeFields;
 }
@@ -304,6 +299,8 @@ async function addSubscriberToAudience(email, mergeFields) {
         audienceId: MAILCHIMP_AUDIENCE_ID,
         attempt
       });
+
+      //"mergeFields":{"SOURCE":"Monday.com Inquiry"},"tags":["Inquiry Enrolled"], NOT CORRECT
       
       const subscriberData = {
         email_address: email,
