@@ -181,7 +181,8 @@ function extractMergeFields(itemDetails) {
     'GENDER': ['Gender', 'sex'],
     'WEBSITE': ['Website', 'site', 'url'],
     'EVENT_DATE': ['Tentative Event Date', 'event_date', 'date0__1'],
-    'CONTACT_DATE': ['Berwick Contact Date', 'contact_date', 'date__1'],
+    'EVENT_TYPE': ['Event Type', 'event_type', 'dropdown__1'],
+    'CONTACT_DATE': ['Berwick Contact Date', 'contact_date', 'date__'],
     'SOURCE': ['Lead Source', 'lead_source', 'source', 'dropdown1__1']
   };
 
@@ -321,7 +322,7 @@ function cleanMergeFieldValue(value, fieldType) {
       
     default:
       // Generic cleaning for other fields
-      return cleanValue.length > 0 && cleanValue.length <= 100 ? cleanValue : null;
+      return cleanValue.length > 0 && cleanValue.length <= 1000 ? cleanValue : null;
   }
 }
 
@@ -350,13 +351,13 @@ async function addSubscriberToAudience(email, mergeFields) {
         email_address: email,
         status: 'subscribed',
         merge_fields: mergeFields,
-        tags: [ENROLLMENT_TAG]
+        tags: mergeFields.EVENT_TYPE || 'NEWLY ENROLLED'
       };
 
       logger.info('Adding subscriber to Mailchimp', {
         email: email,
         mergeFields: mergeFields,
-        tags: [ENROLLMENT_TAG],
+        tags: mergeFields.EVENT_TYPE || 'NEWLY ENROLLED',
         function: 'addSubscriberToAudience'
       });
       
