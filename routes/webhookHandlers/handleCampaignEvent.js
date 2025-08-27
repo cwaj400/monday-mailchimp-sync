@@ -98,6 +98,7 @@ exports.handleCampaignEvent = async function(req, res) {
         status: status,
         subject: subject,
       });      
+      
       if (!MAILCHIMP_API_KEY || !MAILCHIMP_SERVER_PREFIX) {
         throw new Error('Mailchimp API key not configured correctly');
       }

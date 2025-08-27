@@ -179,8 +179,12 @@ function extractMergeFields(itemDetails) {
     'COUNTRY': ['Country', 'nation'],
     'BIRTHDAY': ['Birthday', 'birth_date', 'date_of_birth'],
     'GENDER': ['Gender', 'sex'],
-    'WEBSITE': ['Website', 'site', 'url']
+    'WEBSITE': ['Website', 'site', 'url'],
+    'EVENT_DATE': ['Tentative Event Date', 'event_date', 'date0__1'],
+    'CONTACT_DATE': ['Berwick Contact Date', 'contact_date', 'date__1']
   };
+
+  let nameExtracted = false;
   
   // Process each column in the Monday.com item
   itemDetails.column_values.forEach(column => {
@@ -188,7 +192,20 @@ function extractMergeFields(itemDetails) {
     const columnText = column.text || '';
     const columnId = column.id;
     
+    logger.info('Processing column for merge fields', {
+      columnId: columnId,
+      columnTitle: columnTitle,
+      columnText: columnText,
+      columnType: column.type,
+      function: 'extractMergeFields'
+    });
+    
     if (!columnText || columnText.trim() === '') {
+      logger.info('Skipping empty column', {
+        columnId: columnId,
+        columnTitle: columnTitle,
+        function: 'extractMergeFields'
+      });
       return;
     }
     
@@ -205,11 +222,37 @@ function extractMergeFields(itemDetails) {
         const cleanValue = cleanMergeFieldValue(columnText, mergeField);
         if (cleanValue) {
           mergeFields[mergeField] = cleanValue;
+          if (mergeField === 'FNAME' || mergeField === 'LNAME') { 
+            nameExtracted = true;
+            logger.info('Name extracted', {
+              mergeField: mergeField,
+              cleanValue: cleanValue,
+              function: 'extractMergeFields'
+            });
+          }
         }
         break; // Use first match
       }
     }
   });
+
+
+  if (!nameExtracted && itemDetails.name) {
+    const nameParts = itemDetails.name.trim().split(/\s+/);
+    if (nameParts.length >= 1) {
+      const firstName = nameParts[0];
+      const lastName = nameParts.length > 1 ? nameParts[1] : '';
+      
+      mergeFields['FNAME'] = firstName;
+      mergeFields['LNAME'] = lastName;
+      logger.info('Name extracted from item name', {
+        firstName: firstName,
+        lastName: lastName,
+        function: 'extractMergeFields'
+      });
+    }
+  }
+
   logger.info('Extracted merge fields', {
     mergeFields: mergeFields,
     function: 'extractMergeFields'

@@ -1051,8 +1051,16 @@ async function processMondayWebhook(webhookData) {
       return { success: false, reason: 'No valid email found' };
     }
     
+    let itemDetails = null;
+    await Sentry.startSpan({
+      name: 'extractItemDetailsFromWebhook',
+      op: 'mondayService.processMondayWebhook.extractItemDetailsFromWebhook',
+    }, async (span) => {
+      itemDetails = extractItemDetailsFromWebhook(event, span);
+      span.setStatus('ok');
+    });
+    
     // Extract all column data from webhook for Mailchimp merge fields
-    const itemDetails = extractItemDetailsFromWebhook(event);
     
     // Add breadcrumb for email found
     Sentry.addBreadcrumb({
@@ -1115,12 +1123,16 @@ async function processMondayWebhook(webhookData) {
       }
     });
     
-
-    
     return {
       success: false,
       error: error.message
     };
+  } finally {
+    try {
+      await Sentry.flush(2000);
+    } catch (error) {
+      logger.error('Error flushing Sentry:', error);
+    }
   }
 }
 
@@ -1129,7 +1141,7 @@ async function processMondayWebhook(webhookData) {
  * @param {Object} event - Monday.com webhook event
  * @returns {Object} - Item details in format expected by Mailchimp enrollment
  */
-function extractItemDetailsFromWebhook(event) {
+function extractItemDetailsFromWebhook(event, span) {
   const itemDetails = {
     id: event?.pulseId,
     name: event?.pulseName || 'Unknown',
@@ -1148,14 +1160,71 @@ function extractItemDetailsFromWebhook(event) {
     logger.warn('No column values in webhook event');
     return itemDetails;
   }
+
+  Sentry.addBreadcrumb({
+    category: 'extractItemDetailsFromWebhook',
+    message: 'Extracting item details from webhook',
+    data: {
+      itemId: itemDetails.id,
+      itemName: itemDetails.name,
+      columnCount: itemDetails.column_values.length,
+      columnIds: itemDetails.column_values.map(col => col.id),
+      function: 'extractItemDetailsFromWebhook',
+    }
+  });
   
   // Convert webhook column values to the format expected by Mailchimp enrollment
   for (const [columnId, columnData] of Object.entries(event.columnValues)) {
+
+
+    
+    // Handle different field types properly
+    let textValue = '';
+    let fieldValue = '';
+    
+    // Detect field type by column ID pattern and data structure
+    const isDateField = columnId.startsWith('date') || columnData.date;
+    const isEmailField = columnId.includes('email') || columnData.email;
+    const isPhoneField = columnId.includes('phone') || columnData.phone;
+    const isDropdownField = columnData.chosenValues;
+
+    logger.info('Column data FOR MAILCHIMP fields', {
+      columnId: columnId,
+      columnData: columnData,
+      isDateField: isDateField,
+      isEmailField: isEmailField,
+      isPhoneField: isPhoneField,
+      isDropdownField: isDropdownField
+    });
+    
+    if (isDateField) {
+      // Date fields have their value in columnData.date
+      textValue = columnData.date || columnData.text || '';
+      fieldValue = columnData.date || columnData.value || '';
+    } else if (isEmailField) {
+      // Email fields have their value in columnData.email
+      textValue = columnData.email || columnData.text || '';
+      fieldValue = columnData.email || columnData.value || '';
+    } else if (isPhoneField) {
+      // Phone fields have their value in columnData.phone
+      textValue = columnData.phone || columnData.text || '';
+      fieldValue = columnData.phone || columnData.value || '';
+    } else if (isDropdownField) {
+      // Dropdown fields have their value in chosenValues array
+      const chosenValue = columnData.chosenValues?.[0]?.name || '';
+      textValue = chosenValue;
+      fieldValue = chosenValue;
+    } else {
+      // Text and other fields
+      textValue = columnData.text || columnData.email || '';
+      fieldValue = columnData.value || '';
+    }
+    
     const columnValue = {
       id: columnId,
       title: getColumnTitle(columnId, columnData.type || 'text'),
-      text: columnData.text || columnData.email || '',
-      value: columnData.value || '',
+      text: textValue,
+      value: fieldValue,
       type: columnData.type || 'text'
     };
     
@@ -1167,6 +1236,7 @@ function extractItemDetailsFromWebhook(event) {
     itemName: itemDetails.name,
     columnCount: itemDetails.column_values.length,
     columnIds: itemDetails.column_values.map(col => col.id),
+    columnTypes: itemDetails.column_values.map(col => ({ id: col.id, type: col.type, text: col.text })),
     function: 'extractItemDetailsFromWebhook'
   });
   
