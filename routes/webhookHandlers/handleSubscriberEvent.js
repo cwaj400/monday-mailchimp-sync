@@ -1,13 +1,14 @@
 const { findMondayItemByEmail, addNoteToMondayItem } = require('../../utils/mondayService');
 const { sendDiscordNotification } = require('../../utils/discordNotifier');
 const dotenv = require('dotenv');
-const logger = require('../../utils/logger');
+const { logger } = require('../../utils/logger');
 const Sentry = require('@sentry/node');
 dotenv.config();
 
 exports.handleSubscriberEvent = async function(req, res, eventType) {
     logger.info('handleSubscriberEvent called', {
       eventType: eventType,
+      email: req.body.data.email || 'No email found in handleSubscriberEvent',
       endpoint: '/api/webhook/handle-subscriber-event'
     });
   
@@ -23,8 +24,25 @@ exports.handleSubscriberEvent = async function(req, res, eventType) {
     }
     
     try {
-      // Find the Monday.com item by email
-      const mondayItem = await findMondayItemByEmail(email);
+      let mondayItem = null;
+      await Sentry.startSpan({
+        name: 'findMondayItemByEmail',
+        op: 'monday.api.findItem',
+        attributes: {
+          email: email,
+          listId: listId,
+          eventType: eventType
+        }
+      }, async (span) => {
+        try {
+          // Find the Monday.com item by email
+          mondayItem = await findMondayItemByEmail(email);
+          span.setStatus('ok');
+        } catch (error) {
+          span.setStatus('error');
+          throw error;
+        }
+      });
       
       if (!mondayItem) {
         const errorMsg = `Monday.com item not found for email: ${email}`;

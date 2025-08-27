@@ -12,7 +12,7 @@ const MAILCHIMP_AUDIENCE_ID = process.env.MAILCHIMP_AUDIENCE_ID;
 const ENROLLMENT_TAG = process.env.ENROLLMENT_TAG || 'Newly Enquiried from API';
 const WELCOME_CAMPAIGN_ID = process.env.WELCOME_CAMPAIGN_ID;
 const MAX_RETRIES = 3;
-const RETRY_DELAY = 1000; // 1 second
+const RETRY_DELAY = 2000; // 2 seconds - increased for better reliability
 
 /**
  * Main function to enroll a customer in Mailchimp when they submit an inquiry
@@ -382,6 +382,12 @@ async function addSubscriberToAudience(email, mergeFields) {
       });
       
       console.log(`📧 Adding subscriber ${email} to Mailchimp (attempt ${attempt}/${MAX_RETRIES})`);
+      
+      // Add small delay between attempts to avoid overwhelming the connection
+      if (attempt > 1) {
+        await new Promise(resolve => setTimeout(resolve, 500));
+      }
+      
       const result = await mailchimp.lists.addListMember(MAILCHIMP_AUDIENCE_ID, subscriberData);
       
       console.log(`✅ Successfully added subscriber ${email} (ID: ${result.id})`);
@@ -394,12 +400,21 @@ async function addSubscriberToAudience(email, mergeFields) {
       };
       
     } catch (error) {
+      console.error(`❌ Attempt ${attempt} failed for ${email}:`, error.message);
+      console.error(`Error details:`, {
+        name: error.name,
+        code: error.code,
+        stack: error.stack?.split('\n')[0] // First line of stack trace
+      });
+      
       Sentry.captureException(error, {
         context: 'Mailchimp enrollment',
         email,
         message: error.message,
+        attempt: attempt,
+        errorCode: error.code,
+        errorName: error.name
       });
-      console.error(`❌ Attempt ${attempt} failed for ${email}:`, error.message);
       
       // Handle specific Mailchimp errors
       if (error.response?.data?.title === 'Member Exists') {
@@ -477,8 +492,31 @@ async function addSubscriberToAudience(email, mergeFields) {
         continue;
       }
       
+      // Handle network errors (socket hang up, TLS issues, etc.)
+      const isNetworkError = error.message.includes('socket hang up') || 
+                            error.message.includes('network socket disconnected') ||
+                            error.message.includes('ECONNRESET') ||
+                            error.message.includes('ENOTFOUND') ||
+                            error.message.includes('ETIMEDOUT');
+      
+      if (isNetworkError) {
+        console.log(`🌐 Network error detected: ${error.message}`);
+        console.log(`⏳ Waiting ${RETRY_DELAY * attempt} seconds before retry...`);
+        
+        // Exponential backoff for network errors
+        const backoffDelay = Math.min(RETRY_DELAY * Math.pow(2, attempt - 1), 30000); // Max 30 seconds
+        await new Promise(resolve => setTimeout(resolve, backoffDelay));
+        continue;
+      }
+      
       // Handle other errors
       if (attempt === MAX_RETRIES) {
+        Sentry.captureException(error, {
+          context: 'Mailchimp enrollment',
+          email,
+          message: error.message,
+          attemptNumber: attempt,
+        });
         throw error;
       }
       
