@@ -480,7 +480,7 @@ async function getMondayItemDetails(itemId) {
   try {
     const query = `
       query {
-        items(ids: ["${itemId}"], board_id: ${process.env.MONDAY_BOARD_ID || 'null'}) {
+        items(ids: ["${itemId}"]) {
           id
           name
           column_values {
@@ -510,32 +510,7 @@ async function getMondayItemDetails(itemId) {
       function: 'getMondayItemDetails'
     });
     
-    // If no items found, try without board_id
-    if (!result?.data?.items || result.data.items.length === 0) {
-      logger.info('No items found with board_id, trying without board_id');
-      const fallbackQuery = `
-        query {
-          items(ids: ["${itemId}"]) {
-            id
-            name
-            column_values {
-              id
-              text
-              value
-              type
-            }
-          }
-        }
-      `;
-      result = await executeQuery(fallbackQuery);
-      logger.info('Fallback query result', {
-        hasData: !!result?.data,
-        hasItems: !!result?.data?.items,
-        itemCount: result?.data?.items?.length || 0,
-        itemId: itemId,
-        function: 'getMondayItemDetails'
-      });
-    }
+
     
     if (result.data && result.data.items && result.data.items.length > 0) {
       logger.info('Executed query successfully', {
