@@ -2,12 +2,11 @@ const { findMondayItemByEmail, addNoteToMondayItem } = require('../../utils/mond
 const { sendDiscordNotification } = require('../../utils/discordNotifier');
 const dotenv = require('dotenv');
 const logger = require('../../utils/logger');
+const Sentry = require('@sentry/node');
 dotenv.config();
 
 exports.handleSubscriberEvent = async function(req, res, eventType) {
     logger.info('handleSubscriberEvent called', {
-      email: req.body.data.email,
-      listId: req.body.data.list_id,
       eventType: eventType,
       endpoint: '/api/webhook/handle-subscriber-event'
     });
@@ -75,7 +74,12 @@ exports.handleSubscriberEvent = async function(req, res, eventType) {
           break;
       }
       
-  
+      Sentry.addBreadcrumb('Adding note to Monday item', 'monday.com', {
+        email: email,
+        note: noteText,
+        eventType: eventType
+      });
+      
       // Add a note to the Monday item
       const noteResult = await addNoteToMondayItem(mondayItem.id, noteText);
       

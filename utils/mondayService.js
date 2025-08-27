@@ -34,7 +34,14 @@ async function addNoteToMondayItem(itemId, note) {
 
         const item = await getMondayItem(itemId);
         if (!item) {
-            return { 
+          Sentry.captureException(new Error('Item not found'), {
+            extra: {
+              itemId: itemId,
+              note: note,
+              function: 'addNoteToMondayItem'
+            }
+          });
+            return {
               success: false, 
               error: 'Item not found' 
             };
@@ -55,12 +62,20 @@ async function addNoteToMondayItem(itemId, note) {
   const results = await executeQuery(updateQuery);
   
   if (results.data && results.data.create_update) {
+    
     return {
       success: true,
       updateId: results.data.create_update.id
         };
     }
     } catch (error) {
+      Sentry.captureException(error, {
+        extra: {
+          note: note,
+          error: error.message,
+          function: 'addNoteToMondayItem'
+        }
+      });
             return {
                 success: false,
                 error: error.message
