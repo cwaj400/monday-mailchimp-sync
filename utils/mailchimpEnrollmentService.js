@@ -9,7 +9,7 @@ dotenv.config();
 
 // Configuration
 const MAILCHIMP_AUDIENCE_ID = process.env.MAILCHIMP_AUDIENCE_ID;
-const ENROLLMENT_TAG = process.env.ENROLLMENT_TAG || 'Inquiry Enrolled';
+const ENROLLMENT_TAG = process.env.ENROLLMENT_TAG || 'Newly Enquiried from API';
 const WELCOME_CAMPAIGN_ID = process.env.WELCOME_CAMPAIGN_ID;
 const MAX_RETRIES = 3;
 const RETRY_DELAY = 1000; // 1 second
@@ -347,7 +347,14 @@ async function addSubscriberToAudience(email, mergeFields) {
       
       //"mergeFields":{"SOURCE":"Monday.com Inquiry"},"tags":["Inquiry Enrolled"], NOT CORRECT
       
-      const tags = mergeFields.EVENT_TYPE ? [mergeFields.EVENT_TYPE] : [ENROLLMENT_TAG];
+      const tags = mergeFields.EVENT_TYPE ? [mergeFields.EVENT_TYPE] : [];
+
+      tags.push(ENROLLMENT_TAG);
+      
+      if (mergeFields.SOURCE) {
+        tags.push(mergeFields.SOURCE);
+      }
+
 
       logger.info('Adding subscriber to audience with tags', {
         tags: tags,
