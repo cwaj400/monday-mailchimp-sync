@@ -3,7 +3,7 @@ const dotenv = require('dotenv');
 const { sendDiscordNotification } = require('../../utils/discordNotifier');
 const { findMondayItemByEmail, incrementTouchpoints, addNoteToMondayItem } = require('../../utils/mondayService');
 const Sentry = require('@sentry/node');
-const logger = require('../../utils/logger');
+const { logger } = require('../../utils/logger');
 dotenv.config();
 
 const MAILCHIMP_API_KEY = process.env.MAILCHIMP_API_KEY;

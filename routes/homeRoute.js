@@ -4,7 +4,6 @@ const {logger} = require('../utils/logger');
 const Sentry = require('@sentry/node');
 
 router.get('/', (req, res) => {
-    logger.info('Home route accessed');
   // Detect environment
   let environment = process.env.NODE_ENV || 'development';
   

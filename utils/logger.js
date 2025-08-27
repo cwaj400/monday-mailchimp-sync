@@ -14,6 +14,7 @@ const logger = pino({
 const pinoSentry = {
   info: (message, data = {}) => {
     logger.info(data, message);
+    Sentry.captureMessage(message, 'info');
     // Add breadcrumb for important info logs
     Sentry.addBreadcrumb({
       category: 'logger',
