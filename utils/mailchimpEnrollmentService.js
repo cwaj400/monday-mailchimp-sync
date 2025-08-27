@@ -350,6 +350,7 @@ async function addSubscriberToAudience(email, mergeFields) {
       const tags = mergeFields.EVENT_TYPE ? [mergeFields.EVENT_TYPE] : [];
 
       tags.push(ENROLLMENT_TAG);
+      tags.push('NEW');
       
       if (mergeFields.SOURCE) {
         tags.push(mergeFields.SOURCE);
@@ -370,13 +371,13 @@ async function addSubscriberToAudience(email, mergeFields) {
         email_address: email,
         status: 'subscribed',
         merge_fields: mergeFields,
-        tags: tags || 'ENROLLMENT_TAG'
+        tags: tags
       };
       
       logger.info('Adding subscriber to Mailchimp', {
         email: email,
         mergeFields: mergeFields,
-        tags: tags || 'ENROLLMENT_TAG',
+        tags: tags,
         function: 'addSubscriberToAudience'
       });
       
