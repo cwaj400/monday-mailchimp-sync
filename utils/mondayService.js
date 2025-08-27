@@ -294,52 +294,25 @@ async function findMondayItemByEmail(email) {
       
       // Check each item for the email
       for (const item of itemsToCheck) {
-        // Check all columns for email values
-        for (const column of item.column_values) {
-          // Skip the status column
-          if (column.id === STATUS_COLUMN_ID) continue;
-          
-          // Get email from column
-          let itemEmail = '';
-          
-          // Try text field first
-          if (column.text && column.text.includes('@')) {
-            itemEmail = column.text;
-          } 
-          // Try value field (JSON)
-          else if (column.value) {
-            try {
-              const parsedValue = JSON.parse(column.value);
-              if (parsedValue.email) {
-                itemEmail = parsedValue.email;
-              } else if (parsedValue.text && parsedValue.text.includes('@')) {
-                itemEmail = parsedValue.text;
-              }
-            } catch (e) {
-              // If not JSON but contains @, use it directly
-              if (column.value.includes('@')) {
-                itemEmail = column.value;
-              }
-            }
-          }
-          
-          // Skip if no email found
-          if (!itemEmail || !itemEmail.includes('@')) continue;
+        console.log(`Checking item: ${item.id} (${item.name})`);
+        
+        // Use the proper email extraction logic
+        const itemEmail = extractEmailFromItem(item);
+        
+        if (itemEmail) {
+          console.log(`Found email in item ${item.id}: ${itemEmail}`);
           
           // Normalize and compare
           const normalizedItemEmail = itemEmail.toLowerCase().trim();
           
           if (normalizedItemEmail === normalizedSearchEmail) {
-            console.log(`Found matching item: ${item.id} (${item.name}) in column ${column.id} on page ${pageCount}`);
-            
-            // If the matching column is not the expected EMAIL_COLUMN_ID, log a warning
-            if (column.id !== EMAIL_COLUMN_ID) {
-              console.warn(`Email found in column ${column.id}, but EMAIL_COLUMN_ID is set to ${EMAIL_COLUMN_ID}`);
-            }
+            console.log(`Found matching item: ${item.id} (${item.name}) on page ${pageCount}`);
             
             setEmailInCache(normalizedSearchEmail, item);
             return item;
           }
+        } else {
+          console.log(`No valid email found in item ${item.id}`);
         }
       }
       
@@ -768,6 +741,13 @@ function extractEmailFromItem(item) {
   for (const columnId of emailColumns) {
     const column = item.column_values.find(col => col.id === columnId);
     if (column) {
+      console.log(`Checking column ID ${columnId}:`, {
+        columnType: column.type,
+        columnText: column.text,
+        columnValue: column.value,
+        columnTitle: column.title
+      });
+      
       const email = extractEmailFromColumn(column);
       if (email) {
         console.log(`Found email in column ID ${columnId}: ${email}`);
@@ -784,6 +764,8 @@ function extractEmailFromItem(item) {
         });
         
         return email;
+      } else {
+        console.log(`No valid email found in column ID ${columnId}`);
       }
     }
   }
