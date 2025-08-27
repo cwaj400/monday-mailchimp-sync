@@ -7,7 +7,7 @@ dotenv.config();
 // Get the webhook URL from environment variables
 const webhookUrl = process.env.DISCORD_WEBHOOK_URL;
 /**
- * Send a notification to Discord
+ * Send a notification to Discord (non-blocking)
  * @param {string} title - The notification title
  * @param {string} message - The message text
  * @param {Object} [fields] - Optional fields to include
@@ -61,7 +61,7 @@ async function sendDiscordNotification(title, message, fields = {}, color = '344
     for (let attempt = 1; attempt <= 3; attempt++) {
       try {
         response = await axios.post(webhookUrl, payload, {
-          timeout: 10000, // 10 second timeout
+          timeout: 15000, // 15 second timeout (increased)
           headers: {
             'Content-Type': 'application/json'
           }
@@ -77,7 +77,7 @@ async function sendDiscordNotification(title, message, fields = {}, color = '344
         
         if (attempt < 3) {
           // Wait before retry (exponential backoff)
-          await new Promise(resolve => setTimeout(resolve, attempt * 1000));
+          await new Promise(resolve => setTimeout(resolve, attempt * 2000)); // Increased delay
         }
       }
     }
