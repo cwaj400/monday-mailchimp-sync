@@ -51,11 +51,12 @@ app.get('/test-sentry', (req, res) => {
 });
 
 // Add test routes for Sentry
-app.get("/debug-sentry", function mainHandler(req, res) {
+app.get("/debug-sentry", async function mainHandler(req, res) {
   try {
     throw new Error("My first Sentry error!");
   } catch (error) {
     Sentry.captureException(error);
+    try { await Sentry.flush(2000); } catch {}
     res.status(500).json({ error: 'Error captured with span and sent to Sentry', message: "Check sentry" });
   }
 });
