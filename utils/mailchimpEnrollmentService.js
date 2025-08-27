@@ -258,6 +258,8 @@ function extractMergeFields(itemDetails) {
 
   logger.info('Extracted merge fields', {
     mergeFields: mergeFields,
+    hasEventType: !!mergeFields.EVENT_TYPE,
+    eventTypeValue: mergeFields.EVENT_TYPE,
     function: 'extractMergeFields'
   });
   
@@ -437,7 +439,6 @@ async function addSubscriberToAudience(email, mergeFields) {
             subscriberHash, 
             {
               merge_fields: mergeFields,
-              tags: [ENROLLMENT_TAG]
             }
           );
           
@@ -462,7 +463,7 @@ async function addSubscriberToAudience(email, mergeFields) {
       // Handle "Bad Request" errors (often means subscriber already exists)
       if (error.response?.status === 400) {
         console.log(`⚠️ Bad Request for ${email}, likely already subscribed. Trying to update...`);
-        Sentry
+        
         try {
           const subscriberHash = require('crypto')
             .createHash('md5')
@@ -474,7 +475,6 @@ async function addSubscriberToAudience(email, mergeFields) {
             subscriberHash, 
             {
               merge_fields: mergeFields,
-              tags: [ENROLLMENT_TAG]
             }
           );
           
