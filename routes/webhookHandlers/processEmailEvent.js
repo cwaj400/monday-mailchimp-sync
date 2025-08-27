@@ -48,8 +48,8 @@ exports.processEmailEvent = async function(email, eventType, eventData) {
       const errorMsg = `Monday.com item not found for email: ${email}`;
       console.error(errorMsg);
       
-      // Send Discord notification for missing contact
-      await sendDiscordNotification(
+      // Send Discord notification for missing contact (fire and forget)
+      sendDiscordNotification(
         '⚠️ Touchpoint Update Failed: Contact Not Found',
         `We received a Mailchimp ${eventType} event for ${email}, but couldn't find this contact in Monday.com.`,
         {
@@ -59,7 +59,9 @@ exports.processEmailEvent = async function(email, eventType, eventData) {
           'Campaign': eventData.campaignTitle
         },
         'FFA500' // Orange color for warnings
-      );
+      ).catch(err => {
+        console.error('Discord notification failed:', err.message);
+      });
       
       return { error: errorMsg, email };
     }
@@ -76,7 +78,7 @@ exports.processEmailEvent = async function(email, eventType, eventData) {
       
       if (touchpointResult.success) {
         console.log('touchpoint updated successfully');
-        await sendDiscordNotification(
+        sendDiscordNotification(
           '✅ Touchpoint Updated Successfully',
           `A touchpoint has been added for ${email} based on a Mailchimp ${eventType} event.`,
           {
@@ -88,9 +90,11 @@ exports.processEmailEvent = async function(email, eventType, eventData) {
             'Campaign': eventData.campaignTitle,
         },
         '57F287' // Green color for success
-      );
+      ).catch(err => {
+        console.error('Discord notification failed:', err.message);
+      });
     } else {
-      await sendDiscordNotification(
+      sendDiscordNotification(
         '❌ Failed to Update Touchpoint',
         `We tried to add a touchpoint for ${email} based on a Mailchimp ${eventType} event, but the update failed.`,
         {
@@ -102,12 +106,14 @@ exports.processEmailEvent = async function(email, eventType, eventData) {
           'Note Added': noteResult.success ? 'Yes' : 'No'
         },
         'ED4245' // Red color for errors
-      );
+      ).catch(err => {
+        console.error('Discord notification failed:', err.message);
+      });
     }
   
   } else {
     if (addNoteResult.success) {  
-      await sendDiscordNotification(
+      sendDiscordNotification(
         '✅ Note Added Successfully',
         `A note has been added for ${email} based on a Mailchimp ${eventType} event.`,
         {
@@ -119,9 +125,11 @@ exports.processEmailEvent = async function(email, eventType, eventData) {
           'Note Added': addNoteResult.success ? 'Yes' : 'No'
         },
         '57F287' // Green color for success
-      );
+      ).catch(err => {
+        console.error('Discord notification failed:', err.message);
+      });
     } else {
-      await sendDiscordNotification(
+      sendDiscordNotification(
         '❌ Failed to Add Note',
         `We tried to add a note for ${email} based on a Mailchimp ${eventType} event, but the update failed.`,
         {
@@ -134,7 +142,9 @@ exports.processEmailEvent = async function(email, eventType, eventData) {
           'Note Added': addNoteResult.success ? 'Yes' : 'No'
         },
         'ED4245' // Red color for errors
-      );
+      ).catch(err => {
+        console.error('Discord notification failed:', err.message);
+      });
     }
   }
       return {

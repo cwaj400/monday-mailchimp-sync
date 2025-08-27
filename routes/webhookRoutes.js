@@ -414,7 +414,7 @@ async function processMondayWebhookSpanWrapped(body, parentSpan) {
         route: '/api/webhooks/monday'
       });
       
-      await sendDiscordNotification(
+      sendDiscordNotification(
         '🎯 Monday.com Inquiry Processed',
         'Successfully processed new inquiry from Monday.com.',
         {
@@ -425,9 +425,11 @@ async function processMondayWebhookSpanWrapped(body, parentSpan) {
           'Timestamp': new Date().toISOString()
         },
         result.enrollmentResult?.success ? '57F287' : 'ED4245'
-      );
+      ).catch(err => {
+        console.error('Discord notification failed:', err.message);
+      });
     } else {
-      await sendDiscordNotification(
+      sendDiscordNotification(
         '⚠️ Monday.com Inquiry Skipped',
         'Monday.com webhook was received but processing was skipped.',
         {
@@ -437,14 +439,16 @@ async function processMondayWebhookSpanWrapped(body, parentSpan) {
           'Timestamp': new Date().toISOString()
         },
         'FFA500'
-      );
+      ).catch(err => {
+        console.error('Discord notification failed:', err.message);
+      });
     }
     
   try { await Sentry.flush(2000); } catch {}
   } catch (error) {
     Sentry.captureException(error, { extra: { phase: 'processMondayWebhook' } });
 
-    await sendDiscordNotification(
+    sendDiscordNotification(
       '❌ Monday.com Webhook Error',
       'An error occurred while processing a Monday.com webhook.',
       {
@@ -452,7 +456,9 @@ async function processMondayWebhookSpanWrapped(body, parentSpan) {
         'Timestamp': new Date().toISOString()
       },
       'ED4245'
-    );
+    ).catch(err => {
+      console.error('Discord notification failed:', err.message);
+    });
   }
 }
 

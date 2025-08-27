@@ -73,8 +73,8 @@ exports.handleSubscriberEvent = async function(req, res, eventType) {
         console.error(errorMsg);
 
         
-        // Send Discord notification for missing contact
-        await sendDiscordNotification(
+        // Send Discord notification for missing contact (fire and forget)
+        sendDiscordNotification(
           `⚠️ Mailchimp ${eventType} Update Failed: Contact Not Found`,
           `We received a Mailchimp ${eventType} event for ${email}, but couldn't find this contact in Monday.com.`,
           {
@@ -86,7 +86,9 @@ exports.handleSubscriberEvent = async function(req, res, eventType) {
             'Timestamp': new Date().toISOString()
           },
           'FFA500' // Orange color for warnings
-        );
+        ).catch(err => {
+          console.error('Discord notification failed:', err.message);
+        });
         
         return res.json({ error: errorMsg, email });
       }
@@ -126,39 +128,43 @@ exports.handleSubscriberEvent = async function(req, res, eventType) {
       // Add a note to the Monday item
       const noteResult = await addNoteToMondayItem(mondayItem.id, noteText);
       
-      // Send success notification
-      if (noteResult.success) {
-        console.log(`Updated Mailchimp status for ${email} (${mondayItem.id}) to ${mailchimpStatus}`);
-        
-        await sendDiscordNotification(
-          `✅ Mailchimp ${eventType} Status Updated`,
-          `${email}'s Mailchimp status has been updated to "${mailchimpStatus}" in Monday.com.`,
-          {
-            'Contact': email,
-            'Monday ID': mondayItem.id,
-            'First Name': firstName,
-            'Last Name': lastName,
-            'Status': mailchimpStatus,
-            'List ID': listId,
-            'Note Added': noteResult.success ? 'Yes' : 'No'
-          },
-          '57F287' // Green color for success
-        );
-      } else {
-        await sendDiscordNotification(
-          `❌ Failed to Update Mailchimp ${eventType} Status`,
-          `We tried to update ${email}'s Mailchimp status to "${mailchimpStatus}" in Monday.com, but the update failed.`,
-          {
-            'Contact': email,
-            'Monday ID': mondayItem.id,
-            'Error': updateResult.error,
-            'Status': mailchimpStatus,
-            'List ID': listId,
-            'Note Added': noteResult.success ? 'Yes' : 'No'
-          },
-          'ED4245' // Red color for errors
-        );
-      }
+              // Send success notification (fire and forget)
+        if (noteResult.success) {
+          console.log(`Updated Mailchimp status for ${email} (${mondayItem.id}) to ${mailchimpStatus}`);
+          
+          sendDiscordNotification(
+            `✅ Mailchimp ${eventType} Status Updated`,
+            `${email}'s Mailchimp status has been updated to "${mailchimpStatus}" in Monday.com.`,
+            {
+              'Contact': email,
+              'Monday ID': mondayItem.id,
+              'First Name': firstName,
+              'Last Name': lastName,
+              'Status': mailchimpStatus,
+              'List ID': listId,
+              'Note Added': noteResult.success ? 'Yes' : 'No'
+            },
+            '57F287' // Green color for success
+          ).catch(err => {
+            console.error('Discord notification failed:', err.message);
+          });
+        } else {
+          sendDiscordNotification(
+            `❌ Failed to Update Mailchimp ${eventType} Status`,
+            `We tried to update ${email}'s Mailchimp status to "${mailchimpStatus}" in Monday.com, but the update failed.`,
+            {
+              'Contact': email,
+              'Monday ID': mondayItem.id,
+              'Error': updateResult.error,
+              'Status': mailchimpStatus,
+              'List ID': listId,
+              'Note Added': noteResult.success ? 'Yes' : 'No'
+            },
+            'ED4245' // Red color for errors
+          ).catch(err => {
+            console.error('Discord notification failed:', err.message);
+          });
+        }
       
       // Return result
       return res.json({
@@ -174,7 +180,7 @@ exports.handleSubscriberEvent = async function(req, res, eventType) {
     } catch (error) {
       console.error(`Error processing ${eventType} event for ${email}:`, error);
       
-      await sendDiscordNotification(
+      sendDiscordNotification(
         `❌ Error Processing Mailchimp ${eventType} Event`,
         `An error occurred while processing a Mailchimp ${eventType} event for ${email}.`,
         {
@@ -183,7 +189,9 @@ exports.handleSubscriberEvent = async function(req, res, eventType) {
           'Stack Trace': error.stack?.substring(0, 300) + '...'
         },
         'ED4245' // Red color for errors
-      );
+      ).catch(err => {
+        console.error('Discord notification failed:', err.message);
+      });
       
       return res.status(500).json({
         error: `Failed to process ${eventType} event`,

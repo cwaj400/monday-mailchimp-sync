@@ -78,14 +78,14 @@ async function sendDiscordNotification(title, message, fields = {}, color = '344
     };
     logger.info('Payload:', payload);
     
-    // Send the notification with retry logic
+    // Send the notification with minimal retry logic (non-blocking)
     let response;
     let lastError;
     
-    for (let attempt = 1; attempt <= 3; attempt++) {
+    for (let attempt = 1; attempt <= 2; attempt++) {
       try {
         response = await axios.post(webhookUrl, payload, {
-          timeout: 15000, // 15 second timeout (increased)
+          timeout: 5000, // 5 second timeout (very short)
           headers: {
             'Content-Type': 'application/json'
           }
@@ -97,18 +97,20 @@ async function sendDiscordNotification(title, message, fields = {}, color = '344
           error: error.message,
           webhookUrl: webhookUrl,
           attempt: attempt,
-          maxAttempts: 3
+          maxAttempts: 2
         });
         
-        if (attempt < 3) {
-          // Wait before retry (exponential backoff)
-          await new Promise(resolve => setTimeout(resolve, attempt * 2000)); // Increased delay
+        if (attempt < 2) {
+          // Wait before retry (very short delay)
+          await new Promise(resolve => setTimeout(resolve, 500));
         }
       }
     }
     
     if (!response) {
-      throw lastError; // All attempts failed
+      // Don't throw error, just log and return false
+      logger.warn('Discord notification failed after all attempts, but continuing with main functionality');
+      return false;
     }
     logger.info('Discord notification sent successfully', {
       response: response.data
@@ -118,50 +120,31 @@ async function sendDiscordNotification(title, message, fields = {}, color = '344
         response: response.data
     };
   } catch (error) {
-    console.error('Error sending Discord notification:', error.message);
+    // Log error and capture in Sentry for monitoring
+    logger.warn('Discord notification failed, but main functionality continues:', {
+      error: error.message,
+      code: error.code,
+      webhookUrl: webhookUrl,
+      response: error.response?.data,
+      status: error.response?.status
+    });
     
-    // Handle specific error types
-    if (error.code === 'ECONNABORTED') {
-      logger.error('Discord webhook timeout - possible causes:', {
-        error: error.message,
+    // Capture Discord errors in Sentry for monitoring
+    Sentry.captureException(error, {
+      tags: {
+        component: 'discord_notification',
+        webhook_url: webhookUrl ? 'configured' : 'missing'
+      },
+      extra: {
+        title,
+        message,
         webhookUrl: webhookUrl,
-        possibleCauses: [
-          'Discord API is slow or overloaded',
-          'Webhook URL is invalid or disabled',
-          'Network connectivity issues',
-          'Rate limiting by Discord'
-        ]
-      });
-    } else if (error.response?.status === 404) {
-      logger.error('Discord webhook not found (404):', {
-        error: error.message,
-        webhookUrl: webhookUrl,
-        cause: 'Webhook URL is invalid or has been deleted'
-      });
-    } else if (error.response?.status === 429) {
-      logger.error('Discord rate limit exceeded (429):', {
-        error: error.message,
-        webhookUrl: webhookUrl,
-        cause: 'Too many requests to Discord webhook'
-      });
-    } else {
-      logger.error('Error sending Discord notification:', {
-        error: error.message,
-        code: error.code,
-        webhookUrl: webhookUrl,
-        response: error.response?.data,
-        status: error.response?.status,
-        socketHangUp: error.code === 'ECONNRESET' || error.message.includes('socket hang up')
-      });
-    }
+        error_code: error.code,
+        response_status: error.response?.status,
+        response_data: error.response?.data
+      }
+    });
     
-    // Don't capture Discord errors in Sentry (they're not critical)
-    if (error.response) {
-      console.error('Discord API response:', error.response.data);
-      logger.error('Discord API response:', {
-        response: error.response.data
-      });
-    }
     return false;
   }
 }

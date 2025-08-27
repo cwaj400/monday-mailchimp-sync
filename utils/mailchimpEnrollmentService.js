@@ -80,8 +80,8 @@ async function enrollInMailchimpCampaign(email, itemDetails) {
       email,
     });
     
-    // Send error notification
-    await sendDiscordNotification(
+    // Send error notification (fire and forget)
+    sendDiscordNotification(
       '❌ Mailchimp Enrollment Failed',
       `Failed to enroll ${email} in Mailchimp campaign.`,
       {
@@ -92,7 +92,9 @@ async function enrollInMailchimpCampaign(email, itemDetails) {
         'Timestamp': new Date().toISOString()
       },
       'ED4245' // Red color for errors
-    );
+    ).catch(err => {
+      console.error('Discord notification failed:', err.message);
+    });
     
     return {
       success: false,
@@ -601,12 +603,14 @@ async function sendEnrollmentNotification(email, itemDetails, subscriberResult, 
       'Timestamp': new Date().toISOString()
     };
     
-    await sendDiscordNotification(
+    sendDiscordNotification(
       '🎯 New Customer Enrolled in Mailchimp',
       `A new customer inquiry has been automatically enrolled in your Mailchimp audience.`,
       fields,
       '57F287' // Green color for success
-    );
+    ).catch(err => {
+      console.error('Discord notification failed:', err.message);
+    });
     
   } catch (error) {
     console.error('⚠️ Error sending Discord notification:', error.message);
