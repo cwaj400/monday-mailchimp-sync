@@ -1,11 +1,24 @@
-const axios = require('axios');
 const dotenv = require('dotenv');
-const { logger } = require('./logger');
-const Sentry = require('@sentry/node');
 dotenv.config();
+const Sentry = require('@sentry/node');
+const axios = require('axios');
+const { logger } = require('./logger');
 
-// Get the webhook URL from environment variables
-const webhookUrl = process.env.DISCORD_WEBHOOK_URL;
+/**
+ * Validate Discord webhook URL format
+ * @param {string} webhookUrl - The webhook URL to validate
+ * @returns {boolean} - Whether the URL is valid
+ */
+function isValidDiscordWebhook(webhookUrl) {
+  if (!webhookUrl || typeof webhookUrl !== 'string') {
+    return false;
+  }
+  
+  // Check if it's a valid Discord webhook URL format
+  const discordWebhookRegex = /^https:\/\/discord\.com\/api\/webhooks\/\d+\/[a-zA-Z0-9_-]+$/;
+  return discordWebhookRegex.test(webhookUrl);
+}
+
 /**
  * Send a notification to Discord (non-blocking)
  * @param {string} title - The notification title
@@ -15,6 +28,7 @@ const webhookUrl = process.env.DISCORD_WEBHOOK_URL;
  * @returns {Promise<boolean>} - Whether the notification was sent successfully
  */
 async function sendDiscordNotification(title, message, fields = {}, color = '3447003') {
+  const webhookUrl = process.env.DISCORD_WEBHOOK_URL;
   logger.info('sendDiscordNotification called', {
     title: title,
     message: message,
@@ -23,7 +37,17 @@ async function sendDiscordNotification(title, message, fields = {}, color = '344
   });
 
   if (!webhookUrl) {
+    logger.error('Discord webhook URL not configured');
     Sentry.captureException(new Error('Discord webhook URL not configured'));
+    return false;
+  }
+
+  // Validate webhook URL format
+  if (!isValidDiscordWebhook(webhookUrl)) {
+    logger.error('Invalid Discord webhook URL format', {
+      webhookUrl: webhookUrl
+    });
+    Sentry.captureException(new Error('Invalid Discord webhook URL format'));
     return false;
   }
 
@@ -71,6 +95,7 @@ async function sendDiscordNotification(title, message, fields = {}, color = '344
         lastError = error;
         logger.warn(`Discord notification attempt ${attempt} failed:`, {
           error: error.message,
+          webhookUrl: webhookUrl,
           attempt: attempt,
           maxAttempts: 3
         });
@@ -94,13 +119,41 @@ async function sendDiscordNotification(title, message, fields = {}, color = '344
     };
   } catch (error) {
     console.error('Error sending Discord notification:', error.message);
-    logger.error('Error sending Discord notification:', {
-      error: error.message,
-      code: error.code,
-      response: error.response?.data,
-      status: error.response?.status,
-      socketHangUp: error.code === 'ECONNRESET' || error.message.includes('socket hang up')
-    });
+    
+    // Handle specific error types
+    if (error.code === 'ECONNABORTED') {
+      logger.error('Discord webhook timeout - possible causes:', {
+        error: error.message,
+        webhookUrl: webhookUrl,
+        possibleCauses: [
+          'Discord API is slow or overloaded',
+          'Webhook URL is invalid or disabled',
+          'Network connectivity issues',
+          'Rate limiting by Discord'
+        ]
+      });
+    } else if (error.response?.status === 404) {
+      logger.error('Discord webhook not found (404):', {
+        error: error.message,
+        webhookUrl: webhookUrl,
+        cause: 'Webhook URL is invalid or has been deleted'
+      });
+    } else if (error.response?.status === 429) {
+      logger.error('Discord rate limit exceeded (429):', {
+        error: error.message,
+        webhookUrl: webhookUrl,
+        cause: 'Too many requests to Discord webhook'
+      });
+    } else {
+      logger.error('Error sending Discord notification:', {
+        error: error.message,
+        code: error.code,
+        webhookUrl: webhookUrl,
+        response: error.response?.data,
+        status: error.response?.status,
+        socketHangUp: error.code === 'ECONNRESET' || error.message.includes('socket hang up')
+      });
+    }
     
     // Don't capture Discord errors in Sentry (they're not critical)
     if (error.response) {
