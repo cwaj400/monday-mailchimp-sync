@@ -1056,7 +1056,7 @@ async function processMondayWebhook(webhookData) {
       name: 'extractItemDetailsFromWebhook',
       op: 'mondayService.processMondayWebhook.extractItemDetailsFromWebhook',
     }, async (span) => {
-      itemDetails = extractItemDetailsFromWebhook(event, span);
+      itemDetails = await extractItemDetailsFromWebhook(event, span);
       span.setStatus('ok');
     });
     
@@ -1082,6 +1082,23 @@ async function processMondayWebhook(webhookData) {
     });
     
     const { enrollInMailchimpCampaign } = require('./mailchimpEnrollmentService');
+
+    if (!itemDetails) {
+      logger.error('No item details found in webhook data');
+      Sentry.captureException(new Error('No item details found in webhook data'), {
+        level: 'error',
+        contexts: {
+          webhook: {
+            eventType: webhookData?.event?.type,
+            boardId: webhookData?.event?.boardId,
+            pulseId: webhookData?.event?.pulseId,
+            webhookData: webhookData
+          }
+        }
+      });
+      return { success: false, reason: 'No item details found' };
+    }
+
     const enrollmentResult = await enrollInMailchimpCampaign(email, itemDetails);
     
 
@@ -1141,7 +1158,7 @@ async function processMondayWebhook(webhookData) {
  * @param {Object} event - Monday.com webhook event
  * @returns {Object} - Item details in format expected by Mailchimp enrollment
  */
-function extractItemDetailsFromWebhook(event, span) {
+async function extractItemDetailsFromWebhook(event, span) {
   const itemDetails = {
     id: event?.pulseId,
     name: event?.pulseName || 'Unknown',
