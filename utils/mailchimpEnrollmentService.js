@@ -78,8 +78,6 @@ async function enrollInMailchimpCampaign(email, itemDetails) {
       context: 'Mailchimp enrollment',
       error: error.message,
       email,
-      itemId: itemDetails?.id,
-      processingTime: Date.now() - startTime
     });
     
     // Send error notification

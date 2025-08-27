@@ -114,6 +114,14 @@ router.get('/', (req, res) => {
           <span class="status-label">Mailchimp:</span>
           <span class="status-value">${process.env.MAILCHIMP_API_KEY ? '✅ Configured' : '❌ Not configured'}</span>
         </div>
+        <div class="status-item">
+          <span class="status-label">Discord:</span>
+          <span class="status-value">${process.env.DISCORD_WEBHOOK_URL ? '✅ Configured' : '❌ Not configured'}</span>
+        </div>
+        <div class="status-item">
+          <span class="status-label">Sentry:</span>
+          <span class="status-value">${process.env.SENTRY_DSN ? '✅ Configured' : '❌ Not configured'}</span>
+        </div>
       </div>
       <footer>
         <p>Monday-Mailchimp Integration Service | Version 1.0.0 | ${formattedEnv} Environment</p>

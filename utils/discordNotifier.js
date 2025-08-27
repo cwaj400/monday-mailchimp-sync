@@ -22,12 +22,15 @@ async function sendDiscordNotification(title, message, fields = {}, color = '344
     color: color
   });
 
+  if (!webhookUrl) {
+    Sentry.captureException(new Error('Discord webhook URL not configured'));
+    return false;
+  }
+
   logger.info('Sending Discord notification to:', {
     webhookUrl: webhookUrl
   });
-  if (!webhookUrl) {
-    return false;
-  }
+
 
   try {
     // Format fields as Discord embed fields
