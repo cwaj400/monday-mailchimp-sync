@@ -92,6 +92,16 @@ app.get('/sentry-diagnostics', (req, res) => {
 });
 
 
+app.get('/debut-sentry-logs', async (req, res) => {
+  Sentry.logger.info('User triggered test log', { action: 'test_log' });
+  Sentry.logger.warn('User triggered test warning', { action: 'test_warning' });
+  Sentry.logger.error('User triggered test error', { action: 'test_error', error: new Error('Test error') });
+
+  try { await Sentry.flush(2000); } catch {}
+
+  res.send('Logs sent to Sentry');
+});
+
 app.get('/debug-sentry/performance', async (req, res) => {
   try {
     await Sentry.startSpan(
