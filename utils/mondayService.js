@@ -920,17 +920,22 @@ function extractEmailFromColumn(column) {
  * @returns {string|null} - Cleaned email or null if invalid
  */
 function validateAndCleanEmail(email) {
+  console.log('Validating email:', email);
+  
   if (!email || typeof email !== 'string') {
+    console.log('Email validation failed: not a string or empty');
     return null;
   }
   
   // Remove whitespace and convert to lowercase
   const cleanEmail = email.trim().toLowerCase();
+  console.log('Cleaned email:', cleanEmail);
   
   // Basic email validation regex
   const emailRegex = /^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$/;
   
   if (!emailRegex.test(cleanEmail)) {
+    console.log('Email validation failed: regex test failed');
     return null;
   }
   
@@ -1207,18 +1212,24 @@ async function extractItemDetailsFromWebhook(event, span) {
   
   // Convert webhook column values to the format expected by Mailchimp enrollment
   for (const [columnId, columnData] of Object.entries(event.columnValues)) {
-
-
+    // Skip null column data
+    if (!columnData) {
+      logger.info('Skipping null column data', {
+        columnId: columnId,
+        function: 'extractItemDetailsFromWebhook'
+      });
+      continue;
+    }
     
     // Handle different field types properly
     let textValue = '';
     let fieldValue = '';
     
     // Detect field type by column ID pattern and data structure
-    const isDateField = columnId.startsWith('date') || columnData.date;
-    const isEmailField = columnId.includes('email') || columnData.email;
-    const isPhoneField = columnId.includes('phone') || columnData.phone;
-    const isDropdownField = columnData.chosenValues;
+    const isDateField = columnId.startsWith('date') || (columnData.date && columnData.date !== '');
+    const isEmailField = columnId.includes('email') || (columnData.email && columnData.email !== '');
+    const isPhoneField = columnId.includes('phone') || (columnData.phone && columnData.phone !== '');
+    const isDropdownField = columnData.chosenValues && Array.isArray(columnData.chosenValues) && columnData.chosenValues.length > 0;
 
     logger.info('Column data FOR MAILCHIMP fields', {
       columnId: columnId,
@@ -1271,6 +1282,19 @@ async function extractItemDetailsFromWebhook(event, span) {
     columnTypes: itemDetails.column_values.map(col => ({ id: col.id, type: col.type, text: col.text })),
     function: 'extractItemDetailsFromWebhook'
   });
+  
+  // Validate that we have essential data
+  if (!itemDetails.id) {
+    logger.error('Missing item ID in webhook data');
+    throw new Error('Missing item ID in webhook data');
+  }
+  
+  if (!itemDetails.name || itemDetails.name === 'Unknown') {
+    logger.warn('Missing or unknown item name in webhook data', {
+      itemId: itemDetails.id,
+      itemName: itemDetails.name
+    });
+  }
   
   return itemDetails;
 }
