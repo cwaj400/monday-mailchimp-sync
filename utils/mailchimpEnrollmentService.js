@@ -181,7 +181,8 @@ function extractMergeFields(itemDetails) {
     'GENDER': ['Gender', 'sex'],
     'WEBSITE': ['Website', 'site', 'url'],
     'EVENT_DATE': ['Tentative Event Date', 'event_date', 'date0__1'],
-    'CONTACT_DATE': ['Berwick Contact Date', 'contact_date', 'date__1']
+    'CONTACT_DATE': ['Berwick Contact Date', 'contact_date', 'date__1'],
+    'SOURCE': ['Lead Source', 'lead_source', 'source', 'dropdown1__1']
   };
 
   let nameExtracted = false;
