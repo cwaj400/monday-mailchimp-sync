@@ -55,6 +55,15 @@ app.get("/debug-sentry", async function mainHandler(req, res) {
   try {
     throw new Error("My first Sentry error!");
   } catch (error) {
+    Sentry.addBreadcrumb({
+      category: 'test',
+      message: 'Test breadcrumb',
+      level: 'info',
+      data: {
+        test: 'test'
+      }
+    });
+
     Sentry.captureException(error);
     try { await Sentry.flush(2000); } catch {}
     res.status(500).json({ error: 'Error captured with span and sent to Sentry', message: "Check sentry" });
@@ -97,7 +106,9 @@ app.get('/debut-sentry-logs', async (req, res) => {
   Sentry.logger.warn('User triggered test warning', { action: 'test_warning' });
   Sentry.logger.error('User triggered test error', { action: 'test_error', error: new Error('Test error') });
 
-  try { await Sentry.flush(2000); } catch {}
+  try { await Sentry.flush(2000); } catch {
+    console.error('Error flushing Sentry logs');
+  }
 
   res.send('Logs sent to Sentry');
 });
