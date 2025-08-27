@@ -1201,7 +1201,7 @@ function extractEmailFromWebhookData(columnValues) {
   for (const columnId of emailColumnIds) {
     const column = columnValues[columnId];
     if (column && column.email) {
-      const email = cleanEmail(column.email);
+      const email = validateAndCleanEmail(column.email);
       if (email) {
         logger.info('Found email in webhook data', {
           columnId: columnId,
@@ -1216,7 +1216,7 @@ function extractEmailFromWebhookData(columnValues) {
   // If no email found in common columns, scan all columns
   for (const [columnId, column] of Object.entries(columnValues)) {
     if (column && column.email) {
-      const email = cleanEmail(column.email);
+      const email = validateAndCleanEmail(column.email);
       if (email) {
         logger.info('Found email in webhook data (scanned)', {
           columnId: columnId,

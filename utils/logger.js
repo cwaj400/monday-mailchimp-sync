@@ -14,19 +14,20 @@ const logger = pino({
 const pinoSentry = {
   info: (message, data = {}) => {
     logger.info(data, message);
-    Sentry.captureMessage(message, 'info');
-    // Add breadcrumb for important info logs
-    Sentry.addBreadcrumb({
-      category: 'logger',
-      message,
-      level: 'info',
-      data
-    });
+    // Only add breadcrumb for important info (not every log)
+    if (data.important || data.critical) {
+      Sentry.addBreadcrumb({
+        category: 'logger',
+        message,
+        level: 'info',
+        data
+      });
+    }
   },
 
   warn: (message, data = {}) => {
     logger.warn(data, message);
-    // Add breadcrumb for warnings
+    // Add breadcrumb for warnings (these are important)
     Sentry.addBreadcrumb({
       category: 'logger',
       message,
@@ -37,7 +38,7 @@ const pinoSentry = {
 
   error: (message, data = {}) => {
     logger.error(data, message);
-    // Add breadcrumb for errors
+    // Add breadcrumb for errors (these are important)
     Sentry.addBreadcrumb({
       category: 'logger',
       message,
