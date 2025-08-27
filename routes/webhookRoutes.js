@@ -42,7 +42,8 @@ router.post('/mailchimp', async (req, res) => {
     }
 
     // Fire-and-forget acknowledgement ASAP
-    res.status(200).json({ success: true, message: 'Webhook received, processing' });
+    //res.status(200).json({ success: true, message: 'Webhook received, processing' });
+    
 
     // Process in background with a parent span
     const span = Sentry.startInactiveSpan({
@@ -88,6 +89,7 @@ router.post('/mailchimp', async (req, res) => {
       await processMailchimpWebhook(req, span);
       span.setStatus('ok');
       span.end();
+      return res.status(200).json({ success: true, message: 'Mailchimp webhook received, processing complete' });
     } catch (error) {
       span.setStatus('error');
       span.end();

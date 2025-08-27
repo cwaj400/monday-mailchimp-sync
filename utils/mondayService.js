@@ -175,7 +175,7 @@ async function getMondayItem(itemId) {
 }
 
 /**
- * Find Monday.com item by email with adaptive status filtering
+ * Find Monday.com item by email using efficient column value search
  * @param {string} email - The email to search for
  * @returns {Promise<Object|null>} - The matching item or null if not found
  */
@@ -194,141 +194,104 @@ async function findMondayItemByEmail(email) {
     // Normalize the search email
     const normalizedSearchEmail = email.toLowerCase().trim();
     
+    console.log('checking cache', checkEmailCache(normalizedSearchEmail));
     if (checkEmailCache(normalizedSearchEmail)) {
+
+
+      console.log(`Found email in cache: ${normalizedSearchEmail}`);
       return getEmailFromCache(normalizedSearchEmail);
     }
     
-    // Define the status column ID and active statuses
-    const STATUS_COLUMN_ID = 'lead_status'; // Update this to match your Monday.com board
-    const ACTIVE_STATUSES = ['New', 'Working', 'Chatting', 'Tour Scheduled'];
-    
-    // Set up pagination variables
-    const PAGE_SIZE = 100;
-    let cursor = null;
-    let hasMoreItems = true;
-    let pageCount = 0;
-    let totalItemsChecked = 0;
-    
-    // Track if we should continue filtering by status
-    let useStatusFiltering = true;
-    let consecutiveEmptyPages = 0;
-    
-    // Loop through pages until we find the email or run out of items
-    while (hasMoreItems) {
-      pageCount++;
-      console.log(`Checking page ${pageCount} (cursor: ${cursor || 'initial'})`);
+    // Try each potential email column ID
+    for (const columnId of POTENTIAL_EMAIL_COLUMNS) {
+      // Search in column: ${columnId}
       
-      // Query with pagination and include the status column if we're still filtering
-      const columnsToFetch = useStatusFiltering 
-        ? [...POTENTIAL_EMAIL_COLUMNS, STATUS_COLUMN_ID]
-        : POTENTIAL_EMAIL_COLUMNS;
-      
+      // Use Monday.com's efficient items_page_by_column_values query
       const query = `
-      query {
-        boards(ids: ${MONDAY_BOARD_ID}) {
-          items_page(limit: ${PAGE_SIZE}${cursor ? `, cursor: "${cursor}"` : ''}) {
-            cursor
+        query ($board_id: ID!, $column_id: String!, $email: String!) {
+          items_page_by_column_values(
+            board_id: $board_id,
+            columns: [{ column_id: $column_id, column_values: [$email] }],
+            limit: 1
+          ) {
             items {
               id
               name
-              column_values(ids: ${JSON.stringify(columnsToFetch)}) {
+              column_values {
                 id
                 text
                 value
+                type
+              }
+            }
+          }
+        }
+      `;
+      
+      const variables = {
+        board_id: MONDAY_BOARD_ID,
+        column_id: columnId,
+        email: normalizedSearchEmail
+      };
+      console.log('variables', variables);
+      console.log('query', query);
+      
+      const result = await executeQuery(query, variables);
+      
+      if (result.data && result.data.items_page_by_column_values && result.data.items_page_by_column_values.items.length > 0) {
+        const item = result.data.items_page_by_column_values.items[0];
+        console.log(`Found matching item: ${item.id} (${item.name}) in column ${columnId}`);
+        
+        // Cache the result
+        setEmailInCache(normalizedSearchEmail, item);
+        return item;
+      }
+    }
+    
+    // If no exact match found, try a broader search with partial matching
+    console.log(`No exact match found, trying broader search...`);
+    
+    // Search for items where email contains the search term
+    const broaderQuery = `
+      query ($board_id: ID!, $email: String!) {
+        boards(ids: [$board_id]) {
+          items_page(limit: 50) {
+            items {
+              id
+              name
+              column_values(ids: ${JSON.stringify(POTENTIAL_EMAIL_COLUMNS)}) {
+                id
+                text
+                value
+                type
               }
             }
           }
         }
       }
-      `;
+    `;
+    
+    const broaderVariables = {
+      board_id: MONDAY_BOARD_ID,
+      email: normalizedSearchEmail
+    };
+    
+    const broaderResult = await executeQuery(broaderQuery, broaderVariables);
+    
+    if (broaderResult.data && broaderResult.data.boards && broaderResult.data.boards.length > 0) {
+      const items = broaderResult.data.boards[0].items_page?.items || [];
       
-      const result = await executeQuery(query);
-      
-      if (!result.data || !result.data.boards || result.data.boards.length === 0) {
-        console.error('Invalid response from Monday API');
-        return null;
-      }
-      
-      const itemsPage = result.data.boards[0].items_page;
-      const items = itemsPage?.items || [];
-      
-      // Update cursor for next page
-      cursor = itemsPage.cursor;
-      hasMoreItems = items.length === PAGE_SIZE; // If we got a full page, there might be more
-      
-      totalItemsChecked += items.length;
-      console.log(`Found ${items.length} items on page ${pageCount} (total checked: ${totalItemsChecked})`);
-      
-      // Items to check - either filtered by status or all items
-      let itemsToCheck = items;
-      
-      // Filter items by status if we're still using status filtering
-      if (useStatusFiltering) {
-        const activeItems = items.filter(item => {
-          const statusColumn = item.column_values.find(col => col.id === STATUS_COLUMN_ID);
-          if (!statusColumn) return true; // Include if status column not found
-          
-          // Check if the status text is in our active statuses list
-          return ACTIVE_STATUSES.some(status => 
-            statusColumn.text && statusColumn.text.toLowerCase().includes(status.toLowerCase())
-          );
-        });
-        
-        console.log(`Filtered to ${activeItems.length} active items`);
-        
-        // If we've found no active items for 3 consecutive pages, stop filtering
-        if (activeItems.length === 0) {
-          consecutiveEmptyPages++;
-          if (consecutiveEmptyPages >= 3) {
-            console.log(`Found no active items for ${consecutiveEmptyPages} consecutive pages. Disabling status filtering.`);
-            useStatusFiltering = false;
-            itemsToCheck = items; // Use all items on this page
-          } else {
-            itemsToCheck = activeItems; // Still use filtered items
-          }
-        } else {
-          consecutiveEmptyPages = 0; // Reset counter if we found active items
-          itemsToCheck = activeItems;
-        }
-      }
-      
-      // Check each item for the email
-      for (const item of itemsToCheck) {
-        console.log(`Checking item: ${item.id} (${item.name})`);
-        
-        // Use the proper email extraction logic
+      for (const item of items) {
         const itemEmail = extractEmailFromItem(item);
-        
-        if (itemEmail) {
-          console.log(`Found email in item ${item.id}: ${itemEmail}`);
-          
-          // Normalize and compare
-          const normalizedItemEmail = itemEmail.toLowerCase().trim();
-          
-          if (normalizedItemEmail === normalizedSearchEmail) {
-            console.log(`Found matching item: ${item.id} (${item.name}) on page ${pageCount}`);
-            
-            setEmailInCache(normalizedSearchEmail, item);
-            return item;
-          }
-        } else {
-          console.log(`No valid email found in item ${item.id}`);
+        if (itemEmail && itemEmail.toLowerCase().trim() === normalizedSearchEmail) {
+          console.log(`Found matching item in broader search: ${item.id} (${item.name})`);
+          setEmailInCache(normalizedSearchEmail, item);
+          return item;
         }
-      }
-      
-      // If we've checked a lot of items without finding a match, log a warning
-      if (totalItemsChecked >= 1000 && pageCount % 5 === 0) {
-        console.warn(`Checked ${totalItemsChecked} items without finding a match. Still searching...`);
-      }
-      
-      // Avoid rate limiting
-      if (hasMoreItems) {
-        await new Promise(resolve => setTimeout(resolve, 300)); // 300ms pause between requests
       }
     }
     
-    // If we get here, we've checked all items and found no match
-    console.error(`No Monday item found with email: ${email} after checking ${totalItemsChecked} items`);
+    console.error(`No Monday item found with email: ${email}`);
     return null;
     
   } catch (error) {
@@ -741,12 +704,7 @@ function extractEmailFromItem(item) {
   for (const columnId of emailColumns) {
     const column = item.column_values.find(col => col.id === columnId);
     if (column) {
-      console.log(`Checking column ID ${columnId}:`, {
-        columnType: column.type,
-        columnText: column.text,
-        columnValue: column.value,
-        columnTitle: column.title
-      });
+      // Checking column ID ${columnId}
       
       const email = extractEmailFromColumn(column);
       if (email) {
