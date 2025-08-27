@@ -11,7 +11,8 @@ function getMailchimpClient() {
   console.log('Setting up Mailchimp client... with key:', process.env.MAILCHIMP_API_KEY.slice(0, 5) + '...');
   mailchimp.setConfig({
     apiKey: process.env.MAILCHIMP_API_KEY,
-    server: process.env.MAILCHIMP_SERVER_PREFIX
+    server: process.env.MAILCHIMP_SERVER_PREFIX,
+    timeout: 15000 // 15 second timeout to prevent hanging
   });
   
   return mailchimp;

@@ -11,8 +11,8 @@ dotenv.config();
 const MAILCHIMP_AUDIENCE_ID = process.env.MAILCHIMP_AUDIENCE_ID;
 const ENROLLMENT_TAG = process.env.ENROLLMENT_TAG || 'Newly Enquiried from API';
 const WELCOME_CAMPAIGN_ID = process.env.WELCOME_CAMPAIGN_ID;
-const MAX_RETRIES = 3;
-const RETRY_DELAY = 2000; // 2 seconds - increased for better reliability
+const MAX_RETRIES = 2; // Reduced from 3 to 2 to prevent long processing times
+const RETRY_DELAY = 3000; // 3 seconds - increased for better reliability
 
 /**
  * Main function to enroll a customer in Mailchimp when they submit an inquiry
@@ -335,8 +335,14 @@ function cleanMergeFieldValue(value, fieldType) {
  */
 async function addSubscriberToAudience(email, mergeFields) {
   const mailchimp = getMailchimpClient();
+  const startTime = Date.now();
+  const MAX_PROCESSING_TIME = 60000; // 60 seconds max processing time
   
   for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
+    // Check if we've exceeded maximum processing time
+    if (Date.now() - startTime > MAX_PROCESSING_TIME) {
+      throw new Error(`Processing timeout: exceeded ${MAX_PROCESSING_TIME}ms for ${email}`);
+    }
     try {
       
       Sentry.addBreadcrumb('Adding subscriber to audience', 'mailchimp.api', {
