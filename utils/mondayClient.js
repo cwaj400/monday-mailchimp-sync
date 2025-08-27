@@ -4,19 +4,24 @@ const Sentry = require('@sentry/node');
 const { logger } = require('./logger');
 
 // Export these for testing
-let MONDAY_API_KEY = process.env.MONDAY_API_KEY;
 const MONDAY_API_URL = 'https://api.monday.com/v2';
 
 // Create a function to initialize the client
 function createMondayClient() {
-    
+  // Always get the latest API key from environment
+  const apiKey = process.env.MONDAY_API_KEY;
+  
+  if (!apiKey) {
+    throw new Error('MONDAY_API_KEY environment variable is not set');
+  }
+  
   // Create an axios instance for Monday.com API
   return axios.create({
     baseURL: MONDAY_API_URL,
     timeout: 45000, // 45 second timeout (increased)
     headers: {
       'Content-Type': 'application/json',
-      'Authorization': MONDAY_API_KEY
+      'Authorization': apiKey
     },
   });
 }
@@ -71,7 +76,8 @@ function setMondayClient(mockClient) {
 }
 
 function setApiKey(apiKey) {
-  MONDAY_API_KEY = apiKey;
+  // Set the environment variable and recreate the client
+  process.env.MONDAY_API_KEY = apiKey;
   mondayClient = createMondayClient();
 }
 

@@ -12,6 +12,18 @@ exports.handleSubscriberEvent = async function(req, res, eventType) {
       endpoint: '/api/webhook/handle-subscriber-event'
     });
   
+    if (!req.body.data.email || !req.body.data.list_id) {
+      console.error('Email not provided in webhook data');
+      Sentry.captureException(new Error('Email or List ID not provided in webhook data'), {
+        extra: {
+          eventType: eventType,
+          email: req.body.data.email,
+          listId: req.body.data.list_id
+        }
+      });
+      return res.status(400).json({ error: 'Email or List ID not provided in webhook data' });
+    }
+    
     const email = req.body.data.email;
     const listId = req.body.data.list_id;
     const merges = req.body.data.merges || {};
@@ -20,6 +32,13 @@ exports.handleSubscriberEvent = async function(req, res, eventType) {
   
     if (!email) {
       console.error('Email not provided in webhook data');
+      Sentry.captureException(new Error('Email not provided in webhook data'), {
+        extra: {
+          eventType: eventType,
+          email: email,
+          listId: listId
+        }
+      });
       return res.status(400).json({ error: 'Email not provided in webhook data' });
     }
     
@@ -33,13 +52,18 @@ exports.handleSubscriberEvent = async function(req, res, eventType) {
           listId: listId,
           eventType: eventType
         }
-      }, async (span) => {
+      }, async () => {
         try {
           // Find the Monday.com item by email
           mondayItem = await findMondayItemByEmail(email);
-          span.setStatus('ok');
         } catch (error) {
-          span.setStatus('error');
+            Sentry.captureException(error, {
+  extra: {
+    eventType: eventType,
+    email: email,
+    listId: listId
+          }
+        });
           throw error;
         }
       });
@@ -47,6 +71,7 @@ exports.handleSubscriberEvent = async function(req, res, eventType) {
       if (!mondayItem) {
         const errorMsg = `Monday.com item not found for email: ${email}`;
         console.error(errorMsg);
+
         
         // Send Discord notification for missing contact
         await sendDiscordNotification(
