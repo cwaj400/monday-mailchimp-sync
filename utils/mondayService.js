@@ -728,21 +728,21 @@ function extractEmailFromItem(item) {
     }
   }
   
-  // Then try to find by column title (partial match)
+  // Then try to find by column title (partial match) - only if title is available
   for (const columnTitle of emailColumns) {
     const column = item.column_values.find(col => 
       col.title && col.title.toLowerCase().includes('email')
     );
     if (column) {
-      logger.info('Found email in column title', {
-        columnTitle: column.title,
-        columnId: column.id,
-        email: email,
-        itemId: item.id
-      });
-
       const email = extractEmailFromColumn(column);
       if (email) {
+        logger.info('Found email in column title', {
+          columnTitle: column.title,
+          columnId: column.id,
+          email: email,
+          itemId: item.id
+        });
+
         console.log(`Found email in column title "${column.title}": ${email}`);
         
         Sentry.addBreadcrumb({

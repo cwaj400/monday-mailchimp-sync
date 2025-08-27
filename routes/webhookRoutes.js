@@ -174,24 +174,75 @@ async function processMailchimpWebhook(req, span) {
 
         switch (req.body.type) {
           case 'subscribe':
-            await handleSubscriberEvent(req.body, null, 'subscribe');
+            try {
+              await handleSubscriberEvent(req.body, null, 'subscribe');
+            } catch (error) {
+              console.error('Error handling subscribe event:', error);
+              Sentry.captureException(error, {
+                extra: { 
+                  eventType: 'subscribe',
+                  email: req.body.data?.email,
+                  listId: req.body.data?.list_id
+                }
+              });
+            }
             break;
           case 'unsubscribe':
-            await handleSubscriberEvent(req.body, null, 'unsubscribe');
+            try {
+              await handleSubscriberEvent(req.body, null, 'unsubscribe');
+            } catch (error) {
+              console.error('Error handling unsubscribe event:', error);
+              Sentry.captureException(error, {
+                extra: { 
+                  eventType: 'unsubscribe',
+                  email: req.body.data?.email,
+                  listId: req.body.data?.list_id
+                }
+              });
+            }
             break;
           case 'campaign':
-            await handleCampaignEvent(req.body, null);
+            try {
+              await handleCampaignEvent(req.body, null);
+            } catch (error) {
+              console.error('Error handling campaign event:', error);
+              Sentry.captureException(error, {
+                extra: { eventType: 'campaign' }
+              });
+            }
             break;
           case 'send':
-            await handleEmailSend(req.body, null);
+            try {
+              await handleEmailSend(req.body, null);
+            } catch (error) {
+              console.error('Error handling send event:', error);
+              Sentry.captureException(error, {
+                extra: { eventType: 'send' }
+              });
+            }
             break;
           case 'open':
-            await handleEmailOpen(req.body, null);
+            try {
+              await handleEmailOpen(req.body, null);
+            } catch (error) {
+              console.error('Error handling open event:', error);
+              Sentry.captureException(error, {
+                extra: { eventType: 'open' }
+              });
+            }
             break;
           case 'click':
-            await handleEmailClick(req.body, null);
+            try {
+              await handleEmailClick(req.body, null);
+            } catch (error) {
+              console.error('Error handling click event:', error);
+              Sentry.captureException(error, {
+                extra: { eventType: 'click' }
+              });
+            }
             break;
           default:
+            console.log('Unhandled webhook type:', req.body.type);
             break;
         }
     return;
