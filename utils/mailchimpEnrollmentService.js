@@ -311,6 +311,13 @@ async function addSubscriberToAudience(email, mergeFields) {
         merge_fields: mergeFields,
         tags: [ENROLLMENT_TAG]
       };
+
+      logger.info('Adding subscriber to Mailchimp', {
+        email: email,
+        mergeFields: mergeFields,
+        tags: [ENROLLMENT_TAG],
+        function: 'addSubscriberToAudience'
+      });
       
       const result = await mailchimp.lists.addListMember(MAILCHIMP_AUDIENCE_ID, subscriberData);
       
@@ -324,6 +331,12 @@ async function addSubscriberToAudience(email, mergeFields) {
       };
       
     } catch (error) {
+      Sentry.captureException(error, {
+        context: 'Mailchimp enrollment',
+        email,
+        itemId: itemDetails?.id,
+        processingTime: Date.now() - startTime
+      });
       console.error(`❌ Attempt ${attempt} failed for ${email}:`, error.message);
       
       // Handle specific Mailchimp errors
@@ -352,6 +365,12 @@ async function addSubscriberToAudience(email, mergeFields) {
             attempt
           };
         } catch (updateError) {
+          Sentry.captureException(updateError, {
+            context: 'Mailchimp enrollment',
+            email,
+            itemId: itemDetails?.id,
+            processingTime: Date.now() - startTime
+          });
           console.error(`❌ Failed to update existing subscriber ${email}:`, updateError.message);
           throw updateError;
         }
