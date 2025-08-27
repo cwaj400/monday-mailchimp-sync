@@ -389,8 +389,7 @@ async function addSubscriberToAudience(email, mergeFields) {
       Sentry.captureException(error, {
         context: 'Mailchimp enrollment',
         email,
-        itemId: itemDetails?.id,
-        processingTime: Date.now() - startTime
+        message: error.message,
       });
       console.error(`❌ Attempt ${attempt} failed for ${email}:`, error.message);
       
@@ -434,7 +433,7 @@ async function addSubscriberToAudience(email, mergeFields) {
       // Handle "Bad Request" errors (often means subscriber already exists)
       if (error.response?.status === 400) {
         console.log(`⚠️ Bad Request for ${email}, likely already subscribed. Trying to update...`);
-        
+        Sentry
         try {
           const subscriberHash = require('crypto')
             .createHash('md5')
