@@ -378,9 +378,8 @@ exports.handleCampaignEvent = async function(req, res) {
       Sentry.captureException(error, {
         context: 'Campaign processing',
         extra: {
-        campaignId: campaignId,
-        status: status,
-        subject: subject
+        error: error.message,
+        stack: error.stack?.split('\n')[0] // First line of stack trace
       }
       });
       
