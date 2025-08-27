@@ -1067,7 +1067,7 @@ async function processMondayWebhook(webhookData) {
       category: 'webhook.monday',
       message: 'Email extracted from item',
       level: 'info',
-      data: { 
+      data: {
         itemId: actualItemId,
         email: email
       }

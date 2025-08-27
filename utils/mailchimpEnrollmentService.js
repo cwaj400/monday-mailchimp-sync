@@ -76,6 +76,7 @@ async function enrollInMailchimpCampaign(email, itemDetails) {
     
     Sentry.captureException(error, {
       context: 'Mailchimp enrollment',
+      error: error.message,
       email,
       itemId: itemDetails?.id,
       processingTime: Date.now() - startTime
@@ -337,30 +338,42 @@ async function addSubscriberToAudience(email, mergeFields) {
   
   for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
     try {
-      console.log(`📧 Adding subscriber ${email} to Mailchimp (attempt ${attempt}/${MAX_RETRIES})`);
       
       Sentry.addBreadcrumb('Adding subscriber to audience', 'mailchimp.api', {
         email,
         audienceId: MAILCHIMP_AUDIENCE_ID,
         attempt
       });
-
+      
       //"mergeFields":{"SOURCE":"Monday.com Inquiry"},"tags":["Inquiry Enrolled"], NOT CORRECT
       
+      const tags = mergeFields.EVENT_TYPE ? [mergeFields.EVENT_TYPE] : [ENROLLMENT_TAG];
+
+      logger.info('Adding subscriber to audience with tags', {
+        tags: tags,
+      });
+      
+      Sentry.addBreadcrumb('Adding subscriber to audience', 'mailchimp.api', {
+        email,
+        audienceId: MAILCHIMP_AUDIENCE_ID,
+        tags: JSON.stringify(tags)
+      });
+
       const subscriberData = {
         email_address: email,
         status: 'subscribed',
         merge_fields: mergeFields,
-        tags: mergeFields.EVENT_TYPE || 'NEWLY ENROLLED'
+        tags: tags || 'ENROLLMENT_TAG'
       };
-
+      
       logger.info('Adding subscriber to Mailchimp', {
         email: email,
         mergeFields: mergeFields,
-        tags: mergeFields.EVENT_TYPE || 'NEWLY ENROLLED',
+        tags: tags || 'ENROLLMENT_TAG',
         function: 'addSubscriberToAudience'
       });
       
+      console.log(`📧 Adding subscriber ${email} to Mailchimp (attempt ${attempt}/${MAX_RETRIES})`);
       const result = await mailchimp.lists.addListMember(MAILCHIMP_AUDIENCE_ID, subscriberData);
       
       console.log(`✅ Successfully added subscriber ${email} (ID: ${result.id})`);
