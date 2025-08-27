@@ -135,16 +135,32 @@ exports.handleCampaignEvent = async function(req, res) {
       
       // Add breadcrumb for API request
       Sentry.addBreadcrumb({
-        category: 'api.mailchimp',
+        category: 'mailchimp.api',
         message: 'Fetching campaign details',
         level: 'info',
         data: { campaignId }
       });
       
+      console.log(`Fetching details for campaign ${campaignId}...`);
+      const campaignResponse = await axios.get(
+        `https://${MAILCHIMP_SERVER_PREFIX}.api.mailchimp.com/3.0/campaigns/${campaignId}`,
+        {
+          headers: {
+            'Authorization': `Basic ${Buffer.from(`apikey:${MAILCHIMP_API_KEY}`).toString('base64')}`
+          }
+        }
+      );
+
+      Sentry.addBreadcrumb({
+        category: 'mailchimp.api',
+        message: 'Campaign details fetched',
+        level: 'info',
+        data: { campaignId, campaignResponse: campaignResponse.data }
+      });
+      
       const campaign = campaignResponse.data;
       const campaignTitle = campaign.settings.title || subject || 'Untitled Campaign';
       const listId = campaign.recipients.list_id || eventData.data.list_id;
-      console.log('campaign');
       let emailSubj = campaign.settings.subject_line || subject;
       let emailPreview = campaign.settings.preview_text || '';
       
@@ -193,7 +209,7 @@ exports.handleCampaignEvent = async function(req, res) {
       });
       
       // Create a child span for processing recipients
-              const processingSpan = span ? Sentry.startInactiveSpan({
+      const processingSpan = span ? Sentry.startInactiveSpan({
         name: 'process_recipients',
         op: 'task',
         attributes: { 
