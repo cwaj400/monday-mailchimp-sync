@@ -471,6 +471,29 @@ async function getAllMondayContacts(maxItems = 0) {
  * Get detailed information about a Monday.com item
  * @param {string|number} itemId - The Monday.com item ID
  * @returns {Promise<Object|null>} - Item details or null if not found
+ * 
+ * NOTE: This function is kept for reference but is no longer used in webhook processing.
+ * We now extract data directly from webhook payload for better performance.
+ * 
+ * For future Monday.com API queries, use the items_page approach:
+ * 
+ * query {
+ *   boards(ids: [BOARD_ID]) {
+ *     items_page {
+ *       cursor
+ *       items {
+ *         id
+ *         name
+ *         column_values {
+ *           id
+ *           text
+ *           value
+ *           type
+ *         }
+ *       }
+ *     }
+ *   }
+ * }
  */
 async function getMondayItemDetails(itemId) {
   logger.info('getMondayItemDetails called', {
@@ -543,6 +566,76 @@ async function getMondayItemDetails(itemId) {
   } catch (error) {
     console.error('Error getting Monday.com item details:', error);
     return null;
+  }
+}
+
+/**
+ * Query board items using Monday.com's items_page API (for future use)
+ * @param {number} boardId - The Monday.com board ID
+ * @param {string} cursor - Optional cursor for pagination
+ * @returns {Promise<Object>} - Board items with cursor for pagination
+ */
+async function getBoardItems(boardId, cursor = null) {
+  try {
+    let query;
+    if (cursor) {
+      // Use next_items_page for pagination
+      query = `
+        query {
+          next_items_page(cursor: "${cursor}") {
+            cursor
+            items {
+              id
+              name
+              column_values {
+                id
+                text
+                value
+                type
+              }
+            }
+          }
+        }
+      `;
+    } else {
+      // Use items_page for first page
+      query = `
+        query {
+          boards(ids: [${boardId}]) {
+            items_page {
+              cursor
+              items {
+                id
+                name
+                column_values {
+                  id
+                  text
+                  value
+                  type
+                }
+              }
+            }
+          }
+        }
+      `;
+    }
+
+    logger.info('Executing board items query', {
+      boardId: boardId,
+      cursor: cursor,
+      function: 'getBoardItems'
+    });
+    
+    const result = await executeQuery(query);
+    
+    if (cursor) {
+      return result?.data?.next_items_page || { cursor: null, items: [] };
+    } else {
+      return result?.data?.boards?.[0]?.items_page || { cursor: null, items: [] };
+    }
+  } catch (error) {
+    logger.error('Error querying board items:', error);
+    return { cursor: null, items: [] };
   }
 }
 
@@ -864,12 +957,7 @@ async function processMondayWebhook(webhookData) {
   });
   // Monday.com webhook structure: { event: { type, pulseId, boardId, ... } }
   const event = webhookData.event;
-  
-  // Create a Sentry span for the entire webhook processing
-  const span = Sentry.startInactiveSpan({
-    name: `monday_webhook_${event?.type || 'unknown'}_${event?.pulseId || 'no_id'}`,
-    op: 'webhook.monday.process',
-  });
+
 
   try { 
     
@@ -939,76 +1027,38 @@ async function processMondayWebhook(webhookData) {
       return { success: false, reason: 'No item ID found' };
     }
     
-    console.log('Processing item ID:', actualItemId);
-    
-    // Add breadcrumb for item processing
-    Sentry.addBreadcrumb({
-      category: 'webhook.monday',
-      message: 'Processing Monday.com item',
-      level: 'info',
-      data: { itemId: actualItemId }
+    logger.info('Extracting email from webhook data', {
+      columnValues: event?.columnValues,
+      function: 'processMondayWebhook'
     });
     
-    // Get the newly created item details
-    const itemDetails = await getMondayItemDetails(actualItemId);
+    // Extract email from webhook column values
+    const email = extractEmailFromWebhookData(event?.columnValues);
     
-    if (!itemDetails) {
-      logger.error('Could not retrieve item details for:', actualItemId);
-      
-      Sentry.captureException(new Error(`Could not retrieve item details for ${actualItemId}`), {
-        contexts: {
-          webhook: {
-            itemId: actualItemId,
-            eventType: event?.type,
-            boardId: event?.boardId
-          }
-        }
-      });
-      
-      return { success: false, reason: 'Item not found' };
-    }
-    
-    // Add breadcrumb for item details retrieved
-    Sentry.addBreadcrumb({
-      category: 'webhook.monday',
-      message: 'Item details retrieved successfully',
-      level: 'info',
-      data: { 
-        itemId: actualItemId,
-        itemName: itemDetails.name,
-        columnCount: itemDetails.column_values?.length || 0
-      }
+    logger.info('Email extraction result', {
+      email: email,
+      itemId: actualItemId,
+      function: 'processMondayWebhook'
     });
-    
-    // Extract email from the item
-    const emailSpan = Sentry.startInactiveSpan({
-      name: `extract_email_item_${actualItemId}`,
-      op: 'email.extraction',
-    });
-    
-    const email = extractEmailFromItem(itemDetails);
-    
-    if (emailSpan) {
-      emailSpan.setStatus(email ? 'ok' : 'error');
-      emailSpan.end();
-    }
     
     if (!email) {
-      console.log('No valid email found in item:', actualItemId);
+      console.log('No valid email found in webhook data:', actualItemId);
       
       Sentry.addBreadcrumb({
         category: 'webhook.monday',
-        message: 'No valid email found in item',
+        message: 'No valid email found in webhook data',
         level: 'warning',
         data: { 
           itemId: actualItemId,
-          itemName: itemDetails.name,
-          columnValues: itemDetails.column_values?.map(col => ({ id: col.id, title: col.title }))
+          columnValues: event?.columnValues ? Object.keys(event.columnValues) : []
         }
       });
       
       return { success: false, reason: 'No valid email found' };
     }
+    
+    // Extract all column data from webhook for Mailchimp merge fields
+    const itemDetails = extractItemDetailsFromWebhook(event);
     
     // Add breadcrumb for email found
     Sentry.addBreadcrumb({
@@ -1022,23 +1072,17 @@ async function processMondayWebhook(webhookData) {
     });
     
     // Enroll in Mailchimp campaign
-    const enrollmentSpan = Sentry.startInactiveSpan({
-      name: `mailchimp_enrollment_${email}`,
-      op: 'mailchimp.enrollment',
-    });
+
     logger.info('Enrolling in Mailchimp campaign', {
       email: email,
-      itemDetails: itemDetails,
+      itemId: actualItemId,
       route: '/api/monday/process-webhook'
     });
     
     const { enrollInMailchimpCampaign } = require('./mailchimpEnrollmentService');
     const enrollmentResult = await enrollInMailchimpCampaign(email, itemDetails);
     
-    if (enrollmentSpan) {
-      enrollmentSpan.setStatus(enrollmentResult.success ? 'ok' : 'error');
-      enrollmentSpan.end();
-    }
+
     
     // Add breadcrumb for enrollment result
     Sentry.addBreadcrumb({
@@ -1053,10 +1097,7 @@ async function processMondayWebhook(webhookData) {
       }
     });
     
-    // Set span status based on result
-    if (span) {
-      span.setStatus(enrollmentResult.success ? 'ok' : 'error');
-    }
+
     
     return {
       success: enrollmentResult.success,
@@ -1080,10 +1121,7 @@ async function processMondayWebhook(webhookData) {
       }
     });
     
-    // Set span status to error
-    if (span) {
-      span.setStatus('error');
-    }
+
     
     return {
       success: false,
@@ -1097,6 +1135,118 @@ async function processMondayWebhook(webhookData) {
   }
 }
 
+/**
+ * Extract item details from Monday.com webhook data for Mailchimp merge fields
+ * @param {Object} event - Monday.com webhook event
+ * @returns {Object} - Item details in format expected by Mailchimp enrollment
+ */
+function extractItemDetailsFromWebhook(event) {
+  const itemDetails = {
+    id: event?.pulseId,
+    name: event?.pulseName || 'Unknown',
+    column_values: []
+  };
+
+  logger.info('Extracting item details from webhook', {
+    itemId: itemDetails.id,
+    itemName: itemDetails.name,
+    columnCount: itemDetails.column_values.length,
+    columnIds: itemDetails.column_values.map(col => col.id),
+    function: 'extractItemDetailsFromWebhook'
+  });
+  
+  if (!event?.columnValues) {
+    logger.warn('No column values in webhook event');
+    return itemDetails;
+  }
+  
+  // Convert webhook column values to the format expected by Mailchimp enrollment
+  for (const [columnId, columnData] of Object.entries(event.columnValues)) {
+    const columnValue = {
+      id: columnId,
+      title: getColumnTitle(columnId, columnData.type || 'text'),
+      text: columnData.text || columnData.email || '',
+      value: columnData.value || '',
+      type: columnData.type || 'text'
+    };
+    
+    itemDetails.column_values.push(columnValue);
+  }
+  
+  logger.info('Extracted item details from webhook', {
+    itemId: itemDetails.id,
+    itemName: itemDetails.name,
+    columnCount: itemDetails.column_values.length,
+    columnIds: itemDetails.column_values.map(col => col.id),
+    function: 'extractItemDetailsFromWebhook'
+  });
+  
+  return itemDetails;
+}
+
+/**
+ * Extract email from Monday.com webhook column values
+ * @param {Object} columnValues - Monday.com webhook column values
+ * @returns {string|null} - Email address or null if not found
+ */
+function extractEmailFromWebhookData(columnValues) {
+  if (!columnValues) {
+    logger.warn('No column values in webhook data');
+    return null;
+  }
+  
+  logger.info('Extracting email from webhook column values', {
+    columnKeys: Object.keys(columnValues),
+    function: 'extractEmailFromWebhookData'
+  });
+  
+  // Look for email in common email column IDs
+  const emailColumnIds = [
+    'lead_email',
+    'email_mknrc1cr', 
+    'email_1__1',
+    'email',
+    'contact_email'
+  ];
+  
+  for (const columnId of emailColumnIds) {
+    const column = columnValues[columnId];
+    if (column && column.email) {
+      const email = cleanEmail(column.email);
+      if (email) {
+        logger.info('Found email in webhook data', {
+          columnId: columnId,
+          email: email,
+          function: 'extractEmailFromWebhookData'
+        });
+        return email;
+      }
+    }
+  }
+  
+  // If no email found in common columns, scan all columns
+  for (const [columnId, column] of Object.entries(columnValues)) {
+    if (column && column.email) {
+      const email = cleanEmail(column.email);
+      if (email) {
+        logger.info('Found email in webhook data (scanned)', {
+          columnId: columnId,
+          email: email,
+          function: 'extractEmailFromWebhookData'
+        });
+        return email;
+      }
+    }
+  }
+  
+  logger.warn('No email found in webhook column values', {
+    columnKeys: Object.keys(columnValues),
+    function: 'extractEmailFromWebhookData'
+  });
+  
+  return null;
+}
+
 module.exports = {
   incrementTouchpoints,
   getMondayItem,
@@ -1104,6 +1254,7 @@ module.exports = {
   getMondayContacts,
   addNoteToMondayItem,
   getAllMondayContacts,
+  getBoardItems,
   TOUCHPOINTS_COLUMN_ID,
   EMAIL_COLUMN_ID,
   emailCache,

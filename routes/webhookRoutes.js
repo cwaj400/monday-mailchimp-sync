@@ -219,12 +219,7 @@ router.post('/monday', async (req, res) => {
         challenge: req.body.challenge,
         route: '/api/webhooks/monday'
       });
-      Sentry.addBreadcrumb({
-        category: 'webhook.monday',
-        message: 'Verification challenge',
-        level: 'info',
-        data: { challenge: req.body.challenge }
-      });
+
       return res.status(200).json({ challenge: req.body.challenge });
     }
 
@@ -246,22 +241,10 @@ router.post('/monday', async (req, res) => {
         logger.error('Invalid Monday.com webhook signature', {
           route: '/api/webhooks/monday'
         });
+
         Sentry.captureMessage('Invalid Monday.com webhook signature', 'error');
         return res.status(403).json({ error: 'Invalid signature' });
       }
-
-      Sentry.addBreadcrumb({
-        category: 'webhook.monday',
-        message: 'Signature verified',
-        level: 'info'
-      });
-    } else {
-      Sentry.addBreadcrumb({
-        category: 'webhook.monday',
-        message: 'Skipping signature verification',
-        level: 'warning',
-        data: { hasSignature: !!signature, hasSecret: !!process.env.MONDAY_WEBHOOK_SECRET }
-      });
     }
 
     // Acknowledge fast
@@ -325,7 +308,6 @@ router.post('/monday', async (req, res) => {
 
 async function processMondayWebhookSpanWrapped(body, parentSpan) {
 
-  Sentry.captureMessage('processMondayWebhookSpanWrapped called', 'info');
 
   logger.info('Starting processMondayWebhookSpanWrapped', {
     eventType: body.event?.type,
@@ -349,12 +331,14 @@ async function processMondayWebhookSpanWrapped(body, parentSpan) {
     
     span.setAttribute('function', 'processMondayWebhook');
     span.setAttribute('body of thing', JSON.stringify(body));
+
+    Sentry.captureMessage('processMondayWebhookSpanWrapped called', 'info');
     
     logger.info('Calling processMondayWebhook', {
       eventType: body.event?.type,
       pulseId: body.event?.pulseId,
       boardId: body.event?.boardId,
-      event: body.event,
+      event: JSON.stringify(body.event),
       route: '/api/webhooks/monday'
     });
     
