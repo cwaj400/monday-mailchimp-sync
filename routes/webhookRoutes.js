@@ -275,6 +275,7 @@ router.post('/monday', async (req, res) => {
       logger.info('About to call processMondayWebhookSpanWrapped', {
         route: '/api/webhooks/monday'
       });
+
       await processMondayWebhookSpanWrapped(req.body, span);
       logger.info('processMondayWebhookSpanWrapped completed successfully', {
         route: '/api/webhooks/monday'
@@ -308,7 +309,6 @@ router.post('/monday', async (req, res) => {
 
 async function processMondayWebhookSpanWrapped(body, parentSpan) {
 
-
   logger.info('Starting processMondayWebhookSpanWrapped', {
     eventType: body.event?.type,
     pulseId: body.event?.pulseId,
@@ -316,23 +316,11 @@ async function processMondayWebhookSpanWrapped(body, parentSpan) {
     route: '/api/webhooks/monday',
   });
 
-  Sentry.addBreadcrumb({
-    category: 'webhook.monday',
-    message: 'Starting processMondayWebhook',
-    level: 'info',
-    data: { bodyPreview: JSON.stringify(body).slice(0, 500) + '…' }
-  });
 
   try {
-    const span = Sentry.startInactiveSpan({
-      name: 'processMondayWebhook', 
-      op: 'service.monday'
-    });
-    
-    span.setAttribute('function', 'processMondayWebhook');
-    span.setAttribute('body of thing', JSON.stringify(body));
 
-    Sentry.captureMessage('processMondayWebhookSpanWrapped called', 'info');
+    
+
     
     logger.info('Calling processMondayWebhook', {
       eventType: body.event?.type,
@@ -341,8 +329,13 @@ async function processMondayWebhookSpanWrapped(body, parentSpan) {
       event: JSON.stringify(body.event),
       route: '/api/webhooks/monday'
     });
-    
-    const result = await processMondayWebhook(body);
+    let result = null;
+
+    await Sentry.startSpan(
+      { name: 'processMondayWebhookSpanWrapped', op: 'webhook.monday' }, // parent
+      async () => {
+        result = await processMondayWebhook(body);
+      });
     
     logger.info('processMondayWebhook completed', {
       success: result?.success,
@@ -351,18 +344,9 @@ async function processMondayWebhookSpanWrapped(body, parentSpan) {
       itemId: result?.itemId,
       route: '/api/webhooks/monday'
     });
-    
-    span.setStatus('ok');
-    span.end();
 
+    Sentry.captureMessage('processMondayWebhookSpanWrapped called and completed', 'info');
       
-
-    Sentry.addBreadcrumb({
-      category: 'webhook.monday',
-      message: 'processMondayWebhook completed',
-      level: 'info',
-      data: { resultSummary: { success: !!result?.success, itemId: result?.itemId, email: result?.email } }
-    });
 
     if (result?.success) {
       logger.info('Sending Discord notification for successful enrollment', {
@@ -397,15 +381,9 @@ async function processMondayWebhookSpanWrapped(body, parentSpan) {
         'FFA500'
       );
     }
+    
   try { await Sentry.flush(2000); } catch {}
   } catch (error) {
-    Sentry.addBreadcrumb({
-      category: 'webhook.monday',
-      message: 'Error in processMondayWebhook',
-      level: 'error',
-      data: { error: error.message }
-    });
-
     Sentry.captureException(error, { extra: { phase: 'processMondayWebhook' } });
 
     await sendDiscordNotification(

@@ -973,13 +973,7 @@ async function processMondayWebhook(webhookData) {
         webhookDataKeys: Object.keys(webhookData)
       }
     });
-    
-    console.log('Processing Monday.com webhook:', { 
-      eventType: event?.type, 
-      boardId: event?.boardId, 
-      pulseId: event?.pulseId,
-      webhookDataKeys: Object.keys(webhookData)
-    });
+
     
     // Only process item creation events (Monday.com uses 'create_pulse' for item creation)
     if (event?.type !== 'create_item' && event?.type !== 'create_pulse') {
@@ -1127,11 +1121,6 @@ async function processMondayWebhook(webhookData) {
       success: false,
       error: error.message
     };
-  } finally {
-    // Always end the span
-    if (span) {
-      span.end();
-    }
   }
 }
 
