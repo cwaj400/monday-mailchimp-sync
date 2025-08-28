@@ -102,6 +102,13 @@ async function enrollInMailchimpCampaign(email, itemDetails) {
       email,
       processingTime: Date.now() - startTime
     };
+  } finally {
+    // Flush Sentry data at the end of the entire process
+    try {
+      await Sentry.flush(2000);
+    } catch (flushError) {
+      console.error('Error flushing Sentry:', flushError.message);
+    }
   }
 }
 
@@ -336,8 +343,9 @@ function cleanMergeFieldValue(value, fieldType) {
  * @returns {Promise<Object>} - Result of subscription
  */
 async function addSubscriberToAudience(email, mergeFields) {
-
-  const span = Sentry.startInactiveSpan({ name: 'addSubscriberToAudience', op: 'mailchimp.enrollment' });
+  return await Sentry.startSpan(
+    { name: 'addSubscriberToAudience', op: 'mailchimp.enrollment' },
+    async (span) => {
   const mailchimp = getMailchimpClient();
   const startTime = Date.now();
   const MAX_PROCESSING_TIME = 60000; // 60 seconds max processing time
@@ -467,22 +475,21 @@ async function addSubscriberToAudience(email, mergeFields) {
       
       // Handle other errors
       if (attempt === MAX_RETRIES) {
-        Sentry.captureException(error, {
+        Sentry.captureMessage('Mailchimp enrollment - attempt ' + attempt + ' network error, adding subscriber to audience', {
           context: 'Mailchimp enrollment - attempt ' + attempt + ' network error, adding subscriber to audience',
           email,
           message: error.message,
           attemptNumber: attempt,
         });
+        span.setStatus('error');
         throw error;
       }
       
       // Wait before retry
       await new Promise(resolve => setTimeout(resolve, RETRY_DELAY * attempt));
-    } finally {
-      span.end();
-      try { await Sentry.flush(2000) } catch {} 
     }
   }
+});
 }
 
 /**
