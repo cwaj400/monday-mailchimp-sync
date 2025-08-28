@@ -8,7 +8,7 @@ dotenv.config();
 exports.handleSubscriberEvent = async function(req, res, eventType) {
     logger.info('handleSubscriberEvent called', {
       eventType: eventType,
-      email: req.body.data.email || 'No email found in handleSubscriberEvent',
+      email: JSON.stringify(req.body) || 'No email found in handleSubscriberEvent',
       endpoint: '/api/webhook/handle-subscriber-event'
     });
   
