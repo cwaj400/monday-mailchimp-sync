@@ -177,8 +177,8 @@ function extractMergeFields(itemDetails) {
   // Mailchimp standard merge fields (case sensitive)
   const fieldMappings = {
     'FNAME': ['First Name', 'first_name', 'name', 'firstname', 'text3__1'],
-    'LNAME': ['Last Name', 'last_name', 'surname', 'lastname', 'text2__1'],
-    'PHONE': ['Phone', 'phone', 'telephone', 'mobile', 'lead_phone'],
+    'LNAME': ['Last Name', 'last_name', 'surname', 'lastname', 'text2__1', 'short_text4__1'], // Added short_text4__1 for BOSS
+    'PHONE': ['Phone', 'phone', 'telephone', 'mobile', 'lead_phone', 'phone_1__1'], // Added phone_1__1
     'COMPANY': ['Company', 'organization', 'business', 'employer'],
     'ADDRESS': ['Address', 'street', 'location'],
     'CITY': ['City', 'town'],
@@ -189,7 +189,7 @@ function extractMergeFields(itemDetails) {
     'GENDER': ['Gender', 'sex'],
     'WEBSITE': ['Website', 'site', 'url'],
     'EVENT_DATE': ['Tentative Event Date', 'event_date', 'date0__1'],
-    'EVENT_TYPE': ['Event Type', 'event_type', 'dropdown__1'],
+    'EVENT_TYPE': ['Event Type', 'event_type', 'dropdown__1', 'single_select__1'], // Added single_select__1 for Wedding
     'CONTACT_DATE': ['Berwick Contact Date', 'contact_date', 'date__'],
     'SOURCE': ['Lead Source', 'lead_source', 'source', 'dropdown1__1']
   };
@@ -200,17 +200,23 @@ function extractMergeFields(itemDetails) {
   itemDetails.column_values.forEach(column => {
     const columnTitle = column.title?.toLowerCase() || '';
     const columnText = column.text || '';
+    const columnValue = column.value || '';
     const columnId = column.id;
+    
+    // Use value if text is empty (for dropdowns, etc.)
+    const fieldValue = columnText || columnValue;
     
     logger.info('Processing column for merge fields', {
       columnId: columnId,
       columnTitle: columnTitle,
       columnText: columnText,
+      columnValue: columnValue,
+      fieldValue: fieldValue,
       columnType: column.type,
       function: 'extractMergeFields'
     });
     
-    if (!columnText || columnText.trim() === '') {
+    if (!fieldValue || fieldValue.trim() === '') {
       logger.info('Skipping empty column', {
         columnId: columnId,
         columnTitle: columnTitle,
@@ -229,7 +235,7 @@ function extractMergeFields(itemDetails) {
       
       if (isMatch) {
         // Clean and validate the field value
-        const cleanValue = cleanMergeFieldValue(columnText, mergeField);
+        const cleanValue = cleanMergeFieldValue(fieldValue, mergeField);
         if (cleanValue) {
           mergeFields[mergeField] = cleanValue;
           if (mergeField === 'FNAME' || mergeField === 'LNAME') { 
