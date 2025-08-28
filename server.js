@@ -31,7 +31,7 @@ app.use('/api/status', statusRoutes);
 app.use('/', homeRoute);
 app.use('/health', healthRoute);
 
-app.get('/test', (req, res) => {
+app.get('/test', apiKeyAuth, (req, res) => {
   res.json({ message: 'Hello World' });
 });
 
@@ -50,27 +50,7 @@ app.get('/test-sentry', (req, res) => {
   });
 });
 
-// Add test routes for Sentry
-app.get("/debug-sentry", async function mainHandler(req, res) {
-  try {
-    throw new Error("My first Sentry error!");
-  } catch (error) {
-    Sentry.addBreadcrumb({
-      category: 'test',
-      message: 'Test breadcrumb',
-      level: 'info',
-      data: {
-        test: 'test'
-      }
-    });
-
-    Sentry.captureException(error);
-    try { await Sentry.flush(2000); } catch {}
-    res.status(500).json({ error: 'Error captured with span and sent to Sentry', message: "Check sentry" });
-  }
-});
-
-app.get('/sentry-diagnostics', (req, res) => {
+app.get('/sentry-diagnostics', apiKeyAuth, (req, res) => {
   try {
     // Use the new Sentry v9 API
     const client = Sentry.getClient();
@@ -101,7 +81,7 @@ app.get('/sentry-diagnostics', (req, res) => {
 });
 
 
-app.get('/debut-sentry-logs', async (req, res) => {
+app.get('/debut-sentry-logs', apiKeyAuth, async (req, res) => {
   Sentry.logger.info('User triggered test log', { action: 'test_log' });
   Sentry.logger.warn('User triggered test warning', { action: 'test_warning' });
   Sentry.logger.error('User triggered test error', { action: 'test_error', error: new Error('Test error') });
@@ -113,7 +93,7 @@ app.get('/debut-sentry-logs', async (req, res) => {
   res.send('Logs sent to Sentry');
 });
 
-app.get('/debug-sentry/performance', async (req, res) => {
+app.get('/debug-sentry/performance', apiKeyAuth, async (req, res) => {
   try {
     await Sentry.startSpan(
       { name: 'test-performance', op: 'test' }, // parent
@@ -145,7 +125,7 @@ app.get('/debug-sentry/performance', async (req, res) => {
 });
 
 // New endpoint showing manual span management
-app.get('/debug-sentry/manual-span', async (req, res) => {
+app.get('/debug-sentry/manual-span', apiKeyAuth, async (req, res) => {
   try {
     // Use Pino logger (logs to console AND creates Sentry breadcrumbs)
     logger.info('Manual span test started', {

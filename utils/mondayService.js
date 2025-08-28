@@ -6,7 +6,7 @@ const Sentry = require('@sentry/node');
 dotenv.config();
 
 // Column IDs
-const TOUCHPOINTS_COLUMN_ID = process.env.MONDAY_TOUCHPOINTS_COLUMN_ID || 'numeric_mknr1kvd';
+const TOUCHPOINTS_COLUMN_ID = process.env.TOUCHPOINTS_COLUMN_ID || 'numbers8__1';
 const EMAIL_COLUMN_ID = process.env.EMAIL_COLUMN_ID || 'email_mknrc1cr';
 const MONDAY_BOARD_ID = process.env.MONDAY_BOARD_ID;
 

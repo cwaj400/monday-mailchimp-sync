@@ -1,5 +1,6 @@
 const express = require('express');
 const dotenv = require('dotenv');
+const Sentry = require('@sentry/node');
 
 dotenv.config();
 
@@ -16,6 +17,13 @@ function apiKeyAuth(req, res, next) {
   
   // Check if API key is provided and matches the expected value
   if (!apiKey || apiKey !== process.env.APP_API_KEY) {
+    Sentry.captureMessage('Unauthorized request', {
+      level: 'error',
+      extra: {
+        apiKey: apiKey,
+        expectedKey: process.env.APP_API_KEY
+      }
+    });
     return res.status(401).json({ 
       error: 'Unauthorized', 
       message: 'Invalid or missing API key' 
