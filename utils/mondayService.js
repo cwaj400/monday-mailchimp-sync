@@ -911,10 +911,7 @@ function validateAndCleanEmail(email) {
  */
 async function processMondayWebhook(webhookData) {
   
-  logger.info('processMondayWebhook called - DO WE NEED TO CALL BACK TO MONDAY?', {
-    webhookData: webhookData,
-    endpoint: '/api/monday/process-webhook'
-  });
+
   // Monday.com webhook structure: { event: { type, pulseId, boardId, ... } }
   const event = webhookData.event;
 
@@ -937,10 +934,7 @@ async function processMondayWebhook(webhookData) {
     
     // Only process item creation events (Monday.com uses 'create_pulse' for item creation)
     if (event?.type !== 'create_item' && event?.type !== 'create_pulse') {
-      logger.info('Skipping non-item-creation event:', {
-        eventType: event?.type,
-        endpoint: '/api/monday/process-webhook'
-      });
+    
       console.log('Skipping non-item-creation event:', event?.type);
       
       Sentry.addBreadcrumb({
@@ -956,14 +950,7 @@ async function processMondayWebhook(webhookData) {
     // Extract item ID from the event (Monday.com uses pulseId for item ID)
     const actualItemId = event?.pulseId;
     
-    logger.info('Extracted item ID from webhook', {
-      pulseId: event?.pulseId,
-      itemId: event?.itemId,
-      actualItemId: actualItemId,
-      eventType: event?.type,
-      boardId: event?.boardId,
-      function: 'processMondayWebhook'
-    });
+
     
     if (!actualItemId) {
       logger.error('No item ID found in webhook data');

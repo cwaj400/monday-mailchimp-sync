@@ -324,16 +324,13 @@ router.post('/monday', async (req, res) => {
     });
 
     try {
-      logger.info('About to call processMondayWebhookSpanWrapped', {
-        route: '/api/webhooks/monday'
-      });
+
 
       await processMondayWebhookSpanWrapped(req.body, span);
-      logger.info('processMondayWebhookSpanWrapped completed successfully', {
-        route: '/api/webhooks/monday'
-      });
+
       span.setStatus('ok');
       span.end();
+      try { await Sentry.flush(2000); } catch {}
     } catch (error) {
       logger.error('Error in processMondayWebhookSpanWrapped', {
         error: error.message,
@@ -370,17 +367,6 @@ async function processMondayWebhookSpanWrapped(body, parentSpan) {
 
 
   try {
-
-    
-
-    
-    logger.info('Calling processMondayWebhook', {
-      eventType: body.event?.type,
-      pulseId: body.event?.pulseId,
-      boardId: body.event?.boardId,
-      event: JSON.stringify(body.event),
-      route: '/api/webhooks/monday'
-    });
     let result = null;
 
     await Sentry.startSpan(

@@ -43,10 +43,9 @@ async function enrollInMailchimpCampaign(email, itemDetails) {
     
     // Step 2: Extract and validate merge fields
     const mergeFields = extractMergeFields(itemDetails);
-    
-    // Step 3: Add subscriber to Mailchimp audience
+
     const subscriberResult = await addSubscriberToAudience(cleanEmail, mergeFields);
-    
+
     // Step 4: Send Discord notification
     await sendEnrollmentNotification(cleanEmail, itemDetails, subscriberResult, startTime);
     
@@ -336,6 +335,8 @@ function cleanMergeFieldValue(value, fieldType) {
  * @returns {Promise<Object>} - Result of subscription
  */
 async function addSubscriberToAudience(email, mergeFields) {
+
+  const span = Sentry.startInactiveSpan({ name: 'addSubscriberToAudience', op: 'mailchimp.enrollment' });
   const mailchimp = getMailchimpClient();
   const startTime = Date.now();
   const MAX_PROCESSING_TIME = 60000; // 60 seconds max processing time
@@ -353,7 +354,6 @@ async function addSubscriberToAudience(email, mergeFields) {
         attempt
       });
       
-      //"mergeFields":{"SOURCE":"Monday.com Inquiry"},"tags":["Inquiry Enrolled"], NOT CORRECT
       
       const tags = mergeFields.EVENT_TYPE ? [mergeFields.EVENT_TYPE] : [];
 
@@ -363,11 +363,6 @@ async function addSubscriberToAudience(email, mergeFields) {
       if (mergeFields.SOURCE) {
         tags.push(mergeFields.SOURCE);
       }
-
-
-      logger.info('Adding subscriber to audience with tags', {
-        tags: tags,
-      });
       
       Sentry.addBreadcrumb('Adding subscriber to audience', 'mailchimp.api', {
         email,
@@ -381,15 +376,6 @@ async function addSubscriberToAudience(email, mergeFields) {
         merge_fields: mergeFields,
         tags: tags
       };
-      
-      logger.info('Adding subscriber to Mailchimp', {
-        email: email,
-        mergeFields: mergeFields,
-        tags: tags,
-        function: 'addSubscriberToAudience'
-      });
-      
-      console.log(`📧 Adding subscriber ${email} to Mailchimp (attempt ${attempt}/${MAX_RETRIES})`);
       
       // Add small delay between attempts to avoid overwhelming the connection
       if (attempt > 1) {
@@ -416,49 +402,11 @@ async function addSubscriberToAudience(email, mergeFields) {
       });
       
       Sentry.captureException(error, {
-        context: 'Mailchimp enrollment',
+        context: 'Mailchimp enrollment failed at attempt ' + attempt,
         email,
         message: error.message,
-        attempt: attempt,
-        errorCode: error.code,
-        errorName: error.name
       });
       
-      // Handle specific Mailchimp errors
-      if (error.response?.data?.title === 'Member Exists') {
-        console.log(`📝 Subscriber ${email} already exists, updating...`);
-        
-        try {
-          const subscriberHash = require('crypto')
-            .createHash('md5')
-            .update(email.toLowerCase())
-            .digest('hex');
-          
-          const updateResult = await mailchimp.lists.updateListMember(
-            MAILCHIMP_AUDIENCE_ID, 
-            subscriberHash, 
-            {
-              merge_fields: mergeFields,
-            }
-          );
-          
-          return {
-            success: true,
-            subscriberId: subscriberHash,
-            status: 'updated',
-            attempt
-          };
-        } catch (updateError) {
-          Sentry.captureException(updateError, {
-            context: 'Mailchimp enrollment',
-            email,
-            itemId: itemDetails?.id,
-            processingTime: Date.now() - startTime
-          });
-          console.error(`❌ Failed to update existing subscriber ${email}:`, updateError.message);
-          throw updateError;
-        }
-      }
       
       // Handle "Bad Request" errors (often means subscriber already exists)
       if (error.response?.status === 400) {
@@ -520,11 +468,19 @@ async function addSubscriberToAudience(email, mergeFields) {
         await new Promise(resolve => setTimeout(resolve, backoffDelay));
         continue;
       }
+
+      try {
+        span.setStatus('ok');
+        span.end();
+        await Sentry.flush(2000);
+      } catch (error) {
+        console.error('Error flushing Sentry:', error.message);
+      }
       
       // Handle other errors
       if (attempt === MAX_RETRIES) {
         Sentry.captureException(error, {
-          context: 'Mailchimp enrollment - attempt ' + attempt,
+          context: 'Mailchimp enrollment - attempt ' + attempt + ' network error, adding subscriber to audience',
           email,
           message: error.message,
           attemptNumber: attempt,
