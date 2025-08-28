@@ -44,6 +44,7 @@ async function enrollInMailchimpCampaign(email, itemDetails) {
     // Step 2: Extract and validate merge fields
     const mergeFields = extractMergeFields(itemDetails);
 
+
     const subscriberResult = await addSubscriberToAudience(cleanEmail, mergeFields);
 
     // Step 4: Send Discord notification
@@ -364,12 +365,6 @@ async function addSubscriberToAudience(email, mergeFields) {
         tags.push(mergeFields.SOURCE);
       }
       
-      Sentry.addBreadcrumb('Adding subscriber to audience', 'mailchimp.api', {
-        email,
-        audienceId: MAILCHIMP_AUDIENCE_ID,
-        tags: JSON.stringify(tags)
-      });
-
       const subscriberData = {
         email_address: email,
         status: 'subscribed',
@@ -469,13 +464,6 @@ async function addSubscriberToAudience(email, mergeFields) {
         continue;
       }
 
-      try {
-        span.setStatus('ok');
-        span.end();
-        await Sentry.flush(2000);
-      } catch (error) {
-        console.error('Error flushing Sentry:', error.message);
-      }
       
       // Handle other errors
       if (attempt === MAX_RETRIES) {
@@ -490,6 +478,9 @@ async function addSubscriberToAudience(email, mergeFields) {
       
       // Wait before retry
       await new Promise(resolve => setTimeout(resolve, RETRY_DELAY * attempt));
+    } finally {
+      span.end();
+      try { await Sentry.flush(2000) } catch {} 
     }
   }
 }
