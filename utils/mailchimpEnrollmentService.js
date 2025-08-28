@@ -506,6 +506,12 @@ async function addSubscriberToAudience(email, mergeFields) {
                             error.message.includes('ETIMEDOUT');
       
       if (isNetworkError) {
+        Sentry.captureException(error, {
+          context: 'Mailchimp enrollment network error, adding subscriber to audience',
+          email,
+          message: error.message,
+          attemptNumber: attempt,
+        });
         console.log(`🌐 Network error detected: ${error.message}`);
         console.log(`⏳ Waiting ${RETRY_DELAY * attempt} seconds before retry...`);
         
@@ -518,7 +524,7 @@ async function addSubscriberToAudience(email, mergeFields) {
       // Handle other errors
       if (attempt === MAX_RETRIES) {
         Sentry.captureException(error, {
-          context: 'Mailchimp enrollment',
+          context: 'Mailchimp enrollment - attempt ' + attempt,
           email,
           message: error.message,
           attemptNumber: attempt,
