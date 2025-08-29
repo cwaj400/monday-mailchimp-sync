@@ -390,17 +390,60 @@ async function addSubscriberToAudience(email, mergeFields) {
       if (attempt > 1) {
         await new Promise(resolve => setTimeout(resolve, 500));
       }
+
+      // const result = await mailchimp.lists.addListMember(MAILCHIMP_AUDIENCE_ID, subscriberData);
       
-      const result = await mailchimp.lists.addListMember(MAILCHIMP_AUDIENCE_ID, subscriberData);
+      // console.log(`✅ Successfully added subscriber ${email} (ID: ${result.id})`);
       
-      console.log(`✅ Successfully added subscriber ${email} (ID: ${result.id})`);
+      // return {
+      //   success: true,
+      //   subscriberId: result.id,
+      //   status: result.status,
+      //   attempt
+      // };
+
       
-      return {
-        success: true,
-        subscriberId: result.id,
-        status: result.status,
-        attempt
-      };
+      
+      // Try batch endpoint first (no timeout issues)
+      try {
+        const batchRequest = {
+          operations: [
+            {
+              method: 'POST',
+              path: `/lists/${MAILCHIMP_AUDIENCE_ID}/members`,
+              body: JSON.stringify(subscriberData)
+            }
+          ]
+        };
+        
+        const batchResult = await mailchimp.batches.start(batchRequest);
+        
+        console.log(`✅ Batch started for ${email} (Batch ID: ${batchResult.id})`);
+        
+        return {
+          success: true,
+          batchId: batchResult.id,
+          status: 'batch_queued',
+          attempt,
+          message: 'Enrollment queued for processing'
+        };
+        
+      } catch (batchError) {
+        console.log(`⚠️ Batch failed, trying direct API call: ${batchError.message}`);
+        
+        // Fallback to direct API call if batch fails
+        const result = await mailchimp.lists.addListMember(MAILCHIMP_AUDIENCE_ID, subscriberData);
+        
+        console.log(`✅ Successfully added subscriber ${email} (ID: ${result.id})`);
+        
+        return {
+          success: true,
+          subscriberId: result.id,
+          status: result.status,
+          attempt,
+          method: 'direct'
+        };
+      }
       
     } catch (error) {
       console.error(`❌ Attempt ${attempt} failed for ${email}:`, error.message);
@@ -563,15 +606,31 @@ async function sendEnrollmentNotification(email, itemDetails, subscriberResult, 
       'Monday Item ID': itemDetails.id,
       'Monday Item Name': itemDetails.name,
       'Subscriber Status': subscriberResult.status,
-      'Subscriber ID': subscriberResult.subscriberId,
       'Processing Time': `${processingTime}ms`,
       'Attempts': subscriberResult.attempt || 1,
       'Timestamp': new Date().toISOString()
     };
     
+    // Add batch-specific fields if using batch
+    if (subscriberResult.batchId) {
+      fields['Batch ID'] = subscriberResult.batchId;
+      fields['Method'] = 'Batch Processing';
+    } else if (subscriberResult.subscriberId) {
+      fields['Subscriber ID'] = subscriberResult.subscriberId;
+      fields['Method'] = 'Direct API';
+    }
+    
+    const title = subscriberResult.status === 'batch_queued' 
+      ? '🎯 Customer Enrollment Queued'
+      : '🎯 New Customer Enrolled in Mailchimp';
+      
+    const description = subscriberResult.status === 'batch_queued'
+      ? `A new customer inquiry has been queued for Mailchimp enrollment.`
+      : `A new customer inquiry has been automatically enrolled in your Mailchimp audience.`;
+    
     sendDiscordNotification(
-      '🎯 New Customer Enrolled in Mailchimp',
-      `A new customer inquiry has been automatically enrolled in your Mailchimp audience.`,
+      title,
+      description,
       fields,
       '57F287' // Green color for success
     ).catch(err => {
