@@ -54,12 +54,7 @@ function ipWhitelist(req, res, next) {
   next();
 }
 
-router.use('/', async (req, res, next) => {
-  res.status(200).json({
-    success: true,
-    message: 'Listening for Mailchimp webhooks'
-  });
-});
+
 
 // Apply rate limiting and IP whitelist to all batch endpoints
 router.use('/batches', batchLimiter, ipWhitelist);
